@@ -23,7 +23,7 @@ async def login(user_schema: LoginRequest,  db: Session = Depends(get_db)):
         logger.error(f"Login failed for user: {user_schema.username}, error: {e}")
         raise e
 
-@auth_router.post("/signup", response_model=SignupResponse)
+@auth_router.post("/signup")
 async def signup(user_signup_schema: SignupRequest, db: Session = Depends(get_db)):
     """
     Handles user registration.
