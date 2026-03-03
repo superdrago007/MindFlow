@@ -1,6 +1,9 @@
 from fastapi import FastAPI
-from app.routers.auth import auth_router
-from app.db.database import engine, Base
+from app.routers.auth_router import auth_router
+from app.config.db_config import engine, Base
+# Import all models so SQLAlchemy knows about them when creating tables
+from app.models.User_Model import User
+from app.models.Refresh_Token_Model import Refresh_Token
 import logging
 
 app = FastAPI()

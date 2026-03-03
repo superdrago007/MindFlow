@@ -9,7 +9,13 @@ class LoginRequest(BaseModel):
 
 class LoginResponse(BaseModel):
     username: str
-    email: Optional[EmailStr] = None
+    email: Optional[str]
+    role: str
+    profile_pic: Optional[str]
+    access_token: Optional[str]
+    refresh_token: Optional[str]
+    access_token_expires_in: Optional[int]
+    refresh_token_expires_in: Optional[int]
 
 class SignupRequest(BaseModel):
     full_name: str = Field(min_length=2, max_length=100)
@@ -18,9 +24,14 @@ class SignupRequest(BaseModel):
     password: str 
     
 class SignupResponse(BaseModel):
-    user_id: int
-    full_name: Optional[str]
     username: str
+    role : str
+    full_name: Optional[str]
     email: Optional[str]
     is_active: bool
+    profile_pic: Optional[str]
+    access_token: Optional[str]
+    refresh_token: Optional[str]
+    access_token_expires_in: Optional[int]
+    refresh_token_expires_in: Optional[int]
 
