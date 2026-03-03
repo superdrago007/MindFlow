@@ -1,0 +1,47 @@
+#every network part is of containers
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mindflow-postgres
+    environment:
+      POSTGRES_USER: drago
+      POSTGRES_PASSWORD: Soham123
+      POSTGRES_DB: mindflow_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - mindflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U drago -d mindflow_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mindflow-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mindflow-backend
+    # HOST_PORT : CONTAINER_PORT
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./Backend:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://drago:Soham123@postgres:5432/mindflow_db
+    command: uvicorn app.Main_router:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mindflow-network
+
+volumes:
+  postgres_data:
+
+networks:
+  mindflow-network:
