@@ -1,4 +1,4 @@
-import type { AuthResponse, AuthSession } from "../types/auth";
+import type { AuthResponse, AuthSession, RefreshResponse } from "../types/auth";
 
 export function toExpiryTimestamp(expiresInSeconds: number): string {
   const safeSeconds = Number.isFinite(expiresInSeconds) && expiresInSeconds > 0 ? expiresInSeconds : 0;
@@ -46,5 +46,15 @@ export function toSession(response: AuthResponse): AuthSession {
       isActive: "is_active" in response ? response.is_active : undefined,
       profilePic: response.profile_pic ?? null
     }
+  };
+}
+
+export function applyRefresh(session: AuthSession, response: RefreshResponse): AuthSession {
+  return {
+    ...session,
+    accessToken: response.access_token,
+    refreshToken: response.refresh_token,
+    accessTokenExpiresAt: toExpiryTimestamp(response.access_token_expires_in),
+    refreshTokenExpiresAt: toExpiryTimestamp(response.refresh_token_expires_in)
   };
 }

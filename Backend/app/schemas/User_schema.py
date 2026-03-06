@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, field_validator,Field
+from pydantic import BaseModel, EmailStr, Field
 
 
 class LoginRequest(BaseModel):
@@ -34,4 +34,21 @@ class SignupResponse(BaseModel):
     refresh_token: Optional[str]
     access_token_expires_in: Optional[int]
     refresh_token_expires_in: Optional[int]
+
+
+class RefreshResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    access_token_expires_in: int
+    refresh_token_expires_in: int
+
+
+class ProfileResponse(BaseModel):
+    user_id: int
+    username: str
+    email: Optional[str]
+    full_name: Optional[str]
+    role: str
+    is_active: bool
+    profile_pic: Optional[str]
 

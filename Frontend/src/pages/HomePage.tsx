@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
 import { useAuth } from "../context/AuthContext";
+import api from "../lib/api";
 import { minutesUntilExpiry } from "../lib/auth";
+import type { ProfileResponse } from "../types/auth";
 
 export default function HomePage() {
   const { logout, user, session } = useAuth();
   const navigate = useNavigate();
+  const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [minutesLeft, setMinutesLeft] = useState(() => minutesUntilExpiry(session?.accessTokenExpiresAt));
 
   useEffect(() => {
@@ -18,6 +21,33 @@ export default function HomePage() {
 
     return () => window.clearInterval(interval);
   }, [session?.accessTokenExpiresAt]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProfile = async () => {
+      try {
+        const response = await api.get<ProfileResponse>("/profile");
+        if (!cancelled) {
+          setProfile(response.data);
+        }
+      } catch {
+        if (!cancelled) {
+          setProfile(null);
+        }
+      }
+    };
+
+    if (session?.accessToken) {
+      void loadProfile();
+    } else {
+      setProfile(null);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.accessToken]);
 
   const onLogout = () => {
     logout();
@@ -43,9 +73,9 @@ export default function HomePage() {
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           <article className="rounded-xl border border-ink-100 bg-ink-50 p-4">
             <h2 className="font-display text-sm uppercase tracking-[0.16em] text-ink-600">User</h2>
-            <p className="mt-3 text-sm text-ink-700"><span className="font-semibold text-ink-900">Username:</span> {user?.username ?? "-"}</p>
-            <p className="mt-2 text-sm text-ink-700"><span className="font-semibold text-ink-900">Email:</span> {user?.email ?? "-"}</p>
-            <p className="mt-2 text-sm text-ink-700"><span className="font-semibold text-ink-900">Role:</span> {user?.role ?? "-"}</p>
+            <p className="mt-3 text-sm text-ink-700"><span className="font-semibold text-ink-900">Username:</span> {profile?.username ?? user?.username ?? "-"}</p>
+            <p className="mt-2 text-sm text-ink-700"><span className="font-semibold text-ink-900">Email:</span> {profile?.email ?? user?.email ?? "-"}</p>
+            <p className="mt-2 text-sm text-ink-700"><span className="font-semibold text-ink-900">Role:</span> {profile?.role ?? user?.role ?? "-"}</p>
           </article>
 
           <article className="rounded-xl border border-ink-100 bg-white p-4">

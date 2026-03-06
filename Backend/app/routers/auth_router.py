@@ -1,15 +1,18 @@
 import logging
 import time
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPBearer
+from fastapi.security.http import HTTPAuthorizationCredentials
 from app.config.db_config import get_db
-from app.services.auth_service import signup_user,login_user
+from app.services.auth_service import login_user, refresh_user_token, signup_user
 from sqlalchemy.orm import Session
-from app.schemas.User_schema import LoginRequest, SignupRequest, SignupResponse, LoginResponse
+from app.schemas.User_schema import LoginRequest, LoginResponse, RefreshResponse, SignupRequest, SignupResponse
 
 # Initialize logger for the auth router
 logger = logging.getLogger("auth_routes")
 
 auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
+refresh_security = HTTPBearer(auto_error=False)
 
 @auth_router.post("/login", response_model=LoginResponse)
 async def login(user_schema: LoginRequest,  db: Session = Depends(get_db)):
@@ -47,3 +50,18 @@ async def signup(user_signup_schema: SignupRequest, db: Session = Depends(get_db
         duration = time.time() - start_time
         logger.error(f"FAILED: Signup for {user_signup_schema.username} after {duration:.2f}s")
         raise e
+
+
+@auth_router.post("/refresh", response_model=RefreshResponse)
+async def refresh_token(
+    credentials: HTTPAuthorizationCredentials | None = Depends(refresh_security),
+    db: Session = Depends(get_db),
+):
+    if credentials is None or not credentials.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return await refresh_user_token(credentials.credentials, db)

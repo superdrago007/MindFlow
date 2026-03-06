@@ -2,13 +2,13 @@
 Authentication utility functions for token verification and user extraction from tokens.
 """
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthCredentials
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.security import verify_access_token, verify_refresh_token
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
-async def get_current_user(credentials: HTTPAuthCredentials = Depends(security)):
+async def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(security)):
     """
     Dependency to extract and verify the current user from the access token.
     
@@ -26,6 +26,13 @@ async def get_current_user(credentials: HTTPAuthCredentials = Depends(security))
     Raises:
         HTTPException: If token is invalid or expired
     """
+    if credentials is None or not credentials.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing access token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     token = credentials.credentials
     payload = verify_access_token(token)
     
@@ -39,7 +46,7 @@ async def get_current_user(credentials: HTTPAuthCredentials = Depends(security))
     return payload
 
 
-async def get_current_user_refresh(credentials: HTTPAuthCredentials = Depends(security)):
+async def get_current_user_refresh(credentials: HTTPAuthorizationCredentials | None = Depends(security)):
     """
     Dependency to extract and verify the current user from the refresh token.
     
@@ -60,6 +67,13 @@ async def get_current_user_refresh(credentials: HTTPAuthCredentials = Depends(se
     Raises:
         HTTPException: If token is invalid or expired
     """
+    if credentials is None or not credentials.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     token = credentials.credentials
     payload = verify_refresh_token(token)
     

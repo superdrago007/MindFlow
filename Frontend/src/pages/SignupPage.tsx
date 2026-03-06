@@ -14,6 +14,7 @@ export default function SignupPage() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -43,7 +44,7 @@ export default function SignupPage() {
         username: username.trim(),
         email: email.trim(),
         password
-      });
+      }, rememberMe);
       navigate("/", { replace: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Something went wrong. Please try again.";
@@ -105,6 +106,16 @@ export default function SignupPage() {
           error={errors.password}
           onChange={setPassword}
         />
+
+        <label className="flex items-center gap-2 text-sm text-ink-700">
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(event) => setRememberMe(event.target.checked)}
+            className="h-4 w-4 rounded border-ink-300 text-coral-600 focus:ring-coral-500"
+          />
+          Remember me for this browser session
+        </label>
 
         {serverError ? <p className="rounded-lg border border-coral-200 bg-coral-50 px-3 py-2 text-sm text-coral-700">{serverError}</p> : null}
 

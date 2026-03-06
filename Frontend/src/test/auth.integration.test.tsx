@@ -3,16 +3,19 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import App from "../App";
 import { AuthProvider } from "../context/AuthContext";
-import { storageKey } from "../lib/storage";
+import { clearTokens, getTokens, tokenStoreSessionKey } from "../lib/tokenStore";
 
-const { postMock } = vi.hoisted(() => ({
-  postMock: vi.fn()
+const { postMock, getMock } = vi.hoisted(() => ({
+  postMock: vi.fn(),
+  getMock: vi.fn()
 }));
 
 vi.mock("../lib/api", () => ({
   default: {
-    post: postMock
+    post: postMock,
+    get: getMock
   },
+  configureAuthHandlers: vi.fn(),
   extractApiError: (error: unknown) => {
     if (error instanceof Error && error.message.trim().length > 0) {
       return error.message;
@@ -57,11 +60,15 @@ const signupResponse = {
 
 describe("auth integration", () => {
   beforeEach(() => {
+    clearTokens();
     window.localStorage.clear();
+    window.sessionStorage.clear();
     postMock.mockReset();
+    getMock.mockReset();
+    getMock.mockResolvedValue({ data: { username: "alice", email: "alice@example.com", role: "user" } });
   });
 
-  it("stores session and redirects on login success", async () => {
+  it("stores session in memory and redirects on login success", async () => {
     postMock.mockResolvedValueOnce({ data: loginResponse });
 
     renderApp("/login");
@@ -74,10 +81,11 @@ describe("auth integration", () => {
       expect(screen.getByText("Signed in")).toBeInTheDocument();
     });
 
-    expect(window.localStorage.getItem(storageKey())).toContain("access-token");
+    expect(getTokens()?.accessToken).toBe("access-token");
+    expect(window.localStorage.length).toBe(0);
   });
 
-  it("stores session and redirects on signup success", async () => {
+  it("stores session in sessionStorage when remember me is checked", async () => {
     postMock.mockResolvedValueOnce({ data: signupResponse });
 
     renderApp("/signup");
@@ -86,13 +94,15 @@ describe("auth integration", () => {
     await userEvent.type(screen.getByLabelText("Username"), "newuser");
     await userEvent.type(screen.getByLabelText("Email"), "new@example.com");
     await userEvent.type(screen.getByLabelText("Password"), "secret");
+    await userEvent.click(screen.getByLabelText("Remember me for this browser session"));
     await userEvent.click(screen.getByRole("button", { name: "Create account" }));
 
     await waitFor(() => {
       expect(screen.getByText("Signed in")).toBeInTheDocument();
     });
 
-    expect(window.localStorage.getItem(storageKey())).toContain("access-token-2");
+    expect(window.sessionStorage.getItem(tokenStoreSessionKey())).toContain("access-token-2");
+    expect(window.localStorage.length).toBe(0);
   });
 
   it("shows backend detail on login failure", async () => {
@@ -117,9 +127,9 @@ describe("auth integration", () => {
     });
   });
 
-  it("clears expired session at startup", async () => {
-    window.localStorage.setItem(
-      storageKey(),
+  it("clears expired remember-me session at startup", async () => {
+    window.sessionStorage.setItem(
+      tokenStoreSessionKey(),
       JSON.stringify({
         accessToken: "expired-access",
         refreshToken: "expired-refresh",
@@ -142,6 +152,6 @@ describe("auth integration", () => {
       expect(screen.getByText("Welcome back")).toBeInTheDocument();
     });
 
-    expect(window.localStorage.getItem(storageKey())).toBeNull();
+    expect(window.sessionStorage.getItem(tokenStoreSessionKey())).toBeNull();
   });
 });

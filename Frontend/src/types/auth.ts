@@ -34,6 +34,23 @@ export type SignupResponse = {
   refresh_token_expires_in: number;
 };
 
+export type RefreshResponse = {
+  access_token: string;
+  refresh_token: string;
+  access_token_expires_in: number;
+  refresh_token_expires_in: number;
+};
+
+export type ProfileResponse = {
+  user_id: number;
+  username: string;
+  email?: string | null;
+  full_name?: string | null;
+  role: string;
+  is_active: boolean;
+  profile_pic?: string | null;
+};
+
 export type AuthResponse = LoginResponse | SignupResponse;
 
 export type AuthUser = {

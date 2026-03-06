@@ -1,7 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import api, { extractApiError } from "../lib/api";
+import api, { configureAuthHandlers, extractApiError } from "../lib/api";
 import { isExpired, toSession } from "../lib/auth";
-import { clearStoredSession, getStoredSession, setStoredSession } from "../lib/storage";
+import {
+  clearTokens,
+  getTokens,
+  hydrateTokensFromSessionStorage,
+  setTokens,
+  type PersistenceMode
+} from "../lib/tokenStore";
 import type { AuthSession, LoginRequest, LoginResponse, SignupRequest, SignupResponse } from "../types/auth";
 
 type AuthContextValue = {
@@ -9,9 +15,10 @@ type AuthContextValue = {
   session: AuthSession | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (payload: LoginRequest) => Promise<void>;
-  signup: (payload: SignupRequest) => Promise<void>;
+  login: (payload: LoginRequest, rememberMe: boolean) => Promise<void>;
+  signup: (payload: SignupRequest, rememberMe: boolean) => Promise<void>;
   logout: () => void;
+  handleAuthFailure: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -21,61 +28,82 @@ function ensureValidSession(session: AuthSession | null): AuthSession | null {
     return null;
   }
 
-  if (!session.accessToken || isExpired(session.accessTokenExpiresAt)) {
+  if (!session.accessToken || !session.refreshToken || isExpired(session.refreshTokenExpiresAt)) {
     return null;
   }
 
   return session;
 }
 
+function modeFromRememberMe(rememberMe: boolean): PersistenceMode {
+  return rememberMe ? "session" : "memory";
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const handleAuthFailure = useCallback(() => {
+    clearTokens();
+    setSession(null);
+  }, []);
+
   useEffect(() => {
-    const hydrated = ensureValidSession(getStoredSession());
+    const hydrated = ensureValidSession(hydrateTokensFromSessionStorage());
 
     if (hydrated) {
       setSession(hydrated);
     } else {
-      clearStoredSession();
-      setSession(null);
+      handleAuthFailure();
     }
 
     setIsLoading(false);
-  }, []);
+  }, [handleAuthFailure]);
 
   useEffect(() => {
-    if (!session?.accessTokenExpiresAt) {
+    configureAuthHandlers({
+      onAuthFailure: handleAuthFailure,
+      onTokensUpdated: (nextSession) => {
+        setSession(nextSession);
+      }
+    });
+
+    return () => {
+      configureAuthHandlers({});
+    };
+  }, [handleAuthFailure]);
+
+  useEffect(() => {
+    if (!session?.refreshTokenExpiresAt) {
       return;
     }
 
     const interval = window.setInterval(() => {
-      if (isExpired(session.accessTokenExpiresAt)) {
-        clearStoredSession();
-        setSession(null);
+      const currentSession = getTokens();
+      if (!currentSession || isExpired(currentSession.refreshTokenExpiresAt)) {
+        handleAuthFailure();
       }
     }, 30_000);
 
     return () => window.clearInterval(interval);
-  }, [session]);
+  }, [session?.refreshTokenExpiresAt, handleAuthFailure]);
 
-  const login = useCallback(async (payload: LoginRequest) => {
+  const login = useCallback(async (payload: LoginRequest, rememberMe: boolean) => {
     try {
       const response = await api.post<LoginResponse>("/auth/login", payload);
       const nextSession = toSession(response.data);
-      setStoredSession(nextSession);
+      setTokens(nextSession, modeFromRememberMe(rememberMe));
       setSession(nextSession);
     } catch (error) {
       throw new Error(extractApiError(error));
     }
   }, []);
 
-  const signup = useCallback(async (payload: SignupRequest) => {
+  const signup = useCallback(async (payload: SignupRequest, rememberMe: boolean) => {
     try {
       const response = await api.post<SignupResponse>("/auth/signup", payload);
       const nextSession = toSession(response.data);
-      setStoredSession(nextSession);
+      setTokens(nextSession, modeFromRememberMe(rememberMe));
       setSession(nextSession);
     } catch (error) {
       throw new Error(extractApiError(error));
@@ -83,21 +111,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    clearStoredSession();
-    setSession(null);
-  }, []);
+    handleAuthFailure();
+  }, [handleAuthFailure]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user: session?.user ?? null,
       session,
-      isAuthenticated: Boolean(session && !isExpired(session.accessTokenExpiresAt)),
+      isAuthenticated: Boolean(session && !isExpired(session.refreshTokenExpiresAt)),
       isLoading,
       login,
       signup,
-      logout
+      logout,
+      handleAuthFailure
     }),
-    [session, isLoading, login, signup, logout]
+    [session, isLoading, login, signup, logout, handleAuthFailure]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

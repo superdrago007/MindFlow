@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.routers.auth_router import auth_router
+from app.routers.profile_router import profile_router
 from app.config.db_config import engine, Base
 # Import all models so SQLAlchemy knows about them when creating tables
 from app.models.User_Model import User
@@ -12,6 +13,7 @@ app = FastAPI()
 Base.metadata.create_all(bind=engine)
 
 app.include_router(auth_router)
+app.include_router(profile_router)
 
 logging.basicConfig(
     level=logging.INFO, # Change to DEBUG to see the detailed logs
