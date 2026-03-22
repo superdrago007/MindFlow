@@ -3,12 +3,14 @@ import AuthFormField from "../components/AuthFormField";
 import AuthLayout from "../components/AuthLayout";
 import Button from "../components/Button";
 import { useAuth } from "../context/AuthContext";
+import { useFeedback } from "../context/FeedbackContext";
 import { validateLoginForm } from "../lib/validation";
 import { useState } from "react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { showFeedback } = useFeedback();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -43,11 +45,12 @@ export default function LoginPage() {
 
   return (
     <AuthLayout
+      mode="login"
       title="Welcome back"
       subtitle="Sign in to continue to your MindFlow workspace."
       footer={
         <p>
-          Need an account? <Link className="font-semibold text-coral-600 hover:text-coral-700" to="/signup">Create one</Link>
+          Need an account? <Link className="font-semibold text-indigo-600 hover:text-indigo-700" to="/signup">Create one</Link>
         </p>
       }
     >
@@ -73,17 +76,26 @@ export default function LoginPage() {
           onChange={setPassword}
         />
 
-        <label className="flex items-center gap-2 text-sm text-ink-700">
-          <input
-            type="checkbox"
-            checked={rememberMe}
-            onChange={(event) => setRememberMe(event.target.checked)}
-            className="h-4 w-4 rounded border-ink-300 text-coral-600 focus:ring-coral-500"
-          />
-          Remember me for this browser session
-        </label>
+        <div className="flex items-center justify-between gap-3 text-sm">
+          <label className="flex items-center gap-2 text-slate-600">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(event) => setRememberMe(event.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            Remember me for this browser session
+          </label>
+          <button
+            type="button"
+            className="font-medium text-indigo-600 hover:text-indigo-700"
+            onClick={() => showFeedback("Forgot password flow will be added soon.", "info")}
+          >
+            Forgot password?
+          </button>
+        </div>
 
-        {serverError ? <p className="rounded-lg border border-coral-200 bg-coral-50 px-3 py-2 text-sm text-coral-700">{serverError}</p> : null}
+        {serverError ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{serverError}</p> : null}
 
         <Button type="submit" disabled={submitting}>
           {submitting ? "Signing in..." : "Sign in"}
