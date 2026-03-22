@@ -35,12 +35,14 @@ import {
   Undo2
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Button from "../components/Button";
 import IconActionButton from "../components/IconActionButton";
 import TagChip from "../components/TagChip";
 import { useFeedback } from "../context/FeedbackContext";
+import api, { extractApiError } from "../lib/api";
+import type { NoteDetailResponse, SaveNoteRequest, SaveNoteResponse } from "../types/notes";
 
 const emptyNoteContent = {
   type: "doc",
@@ -79,13 +81,41 @@ const exclusiveToolbarGroups: string[][] = [
   ["align-left", "align-center", "align-right"]
 ];
 
+function buildTitleDocument(titleText: string): Record<string, unknown> {
+  const text = titleText.trim() || "Untitled Note";
+
+  return {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [{ type: "text", text }]
+      }
+    ]
+  };
+}
+
+function formatLastSavedLabel(timestamp?: string | null): string {
+  if (!timestamp) {
+    return "Last saved: Not yet";
+  }
+
+  const savedAt = new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return `Last saved: ${savedAt}`;
+}
+
 export default function NotesPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { showFeedback } = useFeedback();
+  const requestedNoteId = searchParams.get("noteId");
 
   const [title, setTitle] = useState("Project Planning Meeting");
   const [tags, setTags] = useState<string[]>(["work", "planning", "backend"]);
-  const [lastSavedLabel, setLastSavedLabel] = useState("Last saved: 2 min ago");
+  const [noteId, setNoteId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingNote, setIsLoadingNote] = useState(false);
+  const [lastSavedLabel, setLastSavedLabel] = useState("Last saved: Not yet");
   const [selectedButtons, setSelectedButtons] = useState<Set<string>>(new Set());
 
   const editor = useEditor({
@@ -109,6 +139,45 @@ export default function NotesPage() {
     ],
     content: initialContent
   });
+
+  useEffect(() => {
+    if (!editor || !requestedNoteId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadExistingNote = async () => {
+      setIsLoadingNote(true);
+
+      try {
+        const response = await api.get<NoteDetailResponse>(`/profile/notes/${requestedNoteId}`);
+        if (cancelled) {
+          return;
+        }
+
+        const note = response.data;
+        setNoteId(note.note_id);
+        setTitle(note.title_text || "Untitled Note");
+        setLastSavedLabel(formatLastSavedLabel(note.updated_at ?? note.created_at));
+        editor.commands.setContent(note.content);
+      } catch (error) {
+        if (!cancelled) {
+          showFeedback(extractApiError(error), "warning");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingNote(false);
+        }
+      }
+    };
+
+    void loadExistingNote();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editor, requestedNoteId, showFeedback]);
 
   const toolbarItems = useMemo<ToolbarItem[]>(
     () => [
@@ -229,10 +298,31 @@ export default function NotesPage() {
     [editor]
   );
 
-  const saveNote = () => {
-    const savedAt = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    setLastSavedLabel(`Last saved: ${savedAt}`);
-    showFeedback("Note saved locally (UI-only).", "success");
+  const saveNote = async () => {
+    if (!editor || isSaving || isLoadingNote) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const payload: SaveNoteRequest = {
+        title: buildTitleDocument(title),
+        content: editor.getJSON() as Record<string, unknown>,
+        ...(noteId ? { note_id: noteId } : {})
+      };
+
+      const response = await api.post<SaveNoteResponse>("/profile/notes", payload);
+      const operationLabel = response.data.operation === "created" ? "created" : "updated";
+
+      setNoteId(response.data.note_id);
+      setLastSavedLabel(formatLastSavedLabel(response.data.updated_at ?? response.data.created_at));
+      showFeedback(`Note ${operationLabel} in database.`, "success");
+    } catch (error) {
+      showFeedback(extractApiError(error), "warning");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const printJson = () => {
@@ -245,11 +335,14 @@ export default function NotesPage() {
   };
 
   const openNewNote = () => {
-    if (!editor) {
+    if (!editor || isLoadingNote) {
       return;
     }
 
+    navigate("/notes", { replace: true });
+    setNoteId(null);
     setTitle("Untitled Note");
+    setLastSavedLabel("Last saved: Not yet");
     editor.chain().focus().setContent(emptyNoteContent).run();
     showFeedback("Opened a fresh note canvas.", "success");
   };
@@ -313,11 +406,12 @@ export default function NotesPage() {
               <span className="text-xs text-slate-500">{lastSavedLabel}</span>
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-400"
                 onClick={saveNote}
+                disabled={!editor || isSaving || isLoadingNote}
               >
                 <Save className="h-4 w-4" />
-                Save
+                {isLoadingNote ? "Loading..." : isSaving ? "Saving..." : "Save"}
               </button>
               <IconActionButton
                 label="More Actions"

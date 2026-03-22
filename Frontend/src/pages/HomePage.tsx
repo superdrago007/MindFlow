@@ -8,36 +8,9 @@ import TagChip from "../components/TagChip";
 import { useAuth } from "../context/AuthContext";
 import { useFeedback } from "../context/FeedbackContext";
 import { minutesUntilExpiry } from "../lib/auth";
-import api from "../lib/api";
+import api, { extractApiError } from "../lib/api";
 import type { ProfileResponse } from "../types/auth";
-
-type RecentNote = {
-  title: string;
-  preview: string;
-  tags: string[];
-  time: string;
-};
-
-const recentNotes: RecentNote[] = [
-  {
-    title: "Project Planning Meeting",
-    preview: "Discussed authentication flow, token refresh strategy, and task breakdown for the next sprint.",
-    tags: ["work", "planning", "backend"],
-    time: "2 hours ago"
-  },
-  {
-    title: "React Performance Tips",
-    preview: "Collected notes on memoization boundaries, expensive renders, and practical optimization checks.",
-    tags: ["react", "frontend", "learning"],
-    time: "Yesterday"
-  },
-  {
-    title: "Book Notes: Atomic Habits",
-    preview: "Small system changes outperform motivation spikes. Focus on friction and environment design.",
-    tags: ["books", "productivity"],
-    time: "3 days ago"
-  }
-];
+import type { RecentNotesResponse } from "../types/notes";
 
 const suggestionItems = [
   "Connect: Project Planning <-> Sprint Goals",
@@ -59,6 +32,9 @@ export default function HomePage() {
   const { showFeedback } = useFeedback();
 
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
+  const [recentNotes, setRecentNotes] = useState<RecentNotesResponse>([]);
+  const [recentNotesLoading, setRecentNotesLoading] = useState(false);
+  const [recentNotesError, setRecentNotesError] = useState<string | null>(null);
   const [minutesLeft, setMinutesLeft] = useState(() => minutesUntilExpiry(session?.accessTokenExpiresAt));
   const [searchValue, setSearchValue] = useState("");
 
@@ -92,6 +68,45 @@ export default function HomePage() {
       void loadProfile();
     } else {
       setProfile(null);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.accessToken]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadRecentNotes = async () => {
+      setRecentNotesLoading(true);
+      setRecentNotesError(null);
+
+      try {
+        const response = await api.get<unknown>("/profile/notes/recent", {
+          params: { limit: 5 }
+        });
+        if (!cancelled) {
+          setRecentNotes(Array.isArray(response.data) ? (response.data as RecentNotesResponse) : []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setRecentNotes([]);
+          setRecentNotesError(extractApiError(error));
+        }
+      } finally {
+        if (!cancelled) {
+          setRecentNotesLoading(false);
+        }
+      }
+    };
+
+    if (session?.accessToken) {
+      void loadRecentNotes();
+    } else {
+      setRecentNotes([]);
+      setRecentNotesError(null);
+      setRecentNotesLoading(false);
     }
 
     return () => {
@@ -203,25 +218,40 @@ export default function HomePage() {
               </div>
 
               <div className="space-y-3">
-                {recentNotes.map((note) => (
-                  <button
-                    key={note.title}
-                    type="button"
-                    onClick={() => navigate("/notes")}
-                    className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-indigo-300 hover:shadow-md"
-                  >
-                    <h3 className="font-semibold text-slate-800">{note.title}</h3>
-                    <p className="mt-2 text-sm text-slate-600">{note.preview}</p>
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex flex-wrap gap-1">
-                        {note.tags.map((tag) => (
-                          <TagChip key={tag} name={tag} tone="slate" />
-                        ))}
-                      </div>
-                      <span className="text-xs text-slate-400">{note.time}</span>
-                    </div>
-                  </button>
-                ))}
+                {recentNotesLoading ? (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                    Loading recent notes...
+                  </div>
+                ) : null}
+
+                {!recentNotesLoading && recentNotesError ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                    Unable to load recent notes right now. {recentNotesError}
+                  </div>
+                ) : null}
+
+                {!recentNotesLoading && !recentNotesError && recentNotes.length === 0 ? (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                    No recent notes yet. Create your first note to see it here.
+                  </div>
+                ) : null}
+
+                {!recentNotesLoading && !recentNotesError
+                  ? recentNotes.map((note) => (
+                      <button
+                        key={note.note_id}
+                        type="button"
+                        onClick={() => navigate(`/notes?noteId=${encodeURIComponent(note.note_id)}`)}
+                        className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-indigo-300 hover:shadow-md"
+                      >
+                        <h3 className="font-semibold text-slate-800">{note.title}</h3>
+                        <p className="mt-2 text-sm text-slate-600">{note.preview}</p>
+                        <div className="mt-3 flex items-center justify-end">
+                          <span className="text-xs text-slate-400">{note.time}</span>
+                        </div>
+                      </button>
+                    ))
+                  : null}
               </div>
             </section>
 
