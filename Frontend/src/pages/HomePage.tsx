@@ -9,7 +9,7 @@ import { useAuth } from "../context/AuthContext";
 import { useFeedback } from "../context/FeedbackContext";
 import { minutesUntilExpiry } from "../lib/auth";
 import api, { extractApiError } from "../lib/api";
-import type { ProfileResponse } from "../types/auth";
+import type { ProfileResponse, MetaDataResponse } from "../types/profile";
 import type { RecentNotesResponse } from "../types/notes";
 
 const suggestionItems = [
@@ -32,6 +32,7 @@ export default function HomePage() {
   const { showFeedback } = useFeedback();
 
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
+  const [metadata, setMetadata] = useState<MetaDataResponse | null>(null);
   const [recentNotes, setRecentNotes] = useState<RecentNotesResponse>([]);
   const [recentNotesLoading, setRecentNotesLoading] = useState(false);
   const [recentNotesError, setRecentNotesError] = useState<string | null>(null);
@@ -78,6 +79,33 @@ export default function HomePage() {
   useEffect(() => {
     let cancelled = false;
 
+    const loadMetadata = async () => {
+      try {
+        const response = await api.get<MetaDataResponse>("/profile/metadata");
+        if (!cancelled) {
+          setMetadata(response.data);
+        }
+      } catch {
+        if (!cancelled) {
+          setMetadata(null);
+        }
+      }
+    };
+
+    if (session?.accessToken) {
+      void loadMetadata();
+    } else {
+      setMetadata(null);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.accessToken]);
+
+  useEffect(() => {
+    let cancelled = false;
+
     const loadRecentNotes = async () => {
       setRecentNotesLoading(true);
       setRecentNotesError(null);
@@ -114,17 +142,20 @@ export default function HomePage() {
     };
   }, [session?.accessToken]);
 
+  const displayTotalNotes = metadata?.Total_Notes ?? "-";
+  const displayTotalTags = metadata?.Total_Tags ?? "-";
+  const displayTotalConnections = metadata?.Total_Connections ?? "-";
   const displayUser = profile?.username ?? user?.username ?? "user";
   const displayEmail = profile?.email ?? user?.email ?? "unknown@example.com";
 
   const stats = useMemo(
     () => [
-      { icon: FileText, label: "Total Notes", value: "47", gradient: "bg-gradient-to-br from-blue-500 to-blue-600" },
-      { icon: Tag, label: "Tags", value: `${popularTagItems.length}`, gradient: "bg-gradient-to-br from-emerald-500 to-emerald-600" },
-      { icon: Link2, label: "Connections", value: "23", gradient: "bg-gradient-to-br from-purple-500 to-purple-600" },
+      { icon: FileText, label: "Total Notes", value: `${displayTotalNotes}`, gradient: "bg-gradient-to-br from-blue-500 to-blue-600" },
+      { icon: Tag, label: "Tags", value: `${displayTotalTags}`, gradient: "bg-gradient-to-br from-emerald-500 to-emerald-600" },
+      { icon: Link2, label: "Connections", value: `${displayTotalConnections}`, gradient: "bg-gradient-to-br from-purple-500 to-purple-600" },
       { icon: Sparkles, label: "Session Left", value: `${minutesLeft}m`, gradient: "bg-gradient-to-br from-orange-500 to-orange-600" }
     ],
-    [minutesLeft]
+    [displayTotalConnections, displayTotalNotes, displayTotalTags, minutesLeft]
   );
 
   const onLogout = () => {
@@ -148,7 +179,6 @@ export default function HomePage() {
               </div>
               <div>
                 <h1 className="font-display text-2xl">MindFlow</h1>
-                <p className="text-xs text-indigo-100/90">Signed in</p>
                 <p className="text-xs text-indigo-100">Signed in as {displayUser}</p>
               </div>
             </div>
@@ -311,3 +341,4 @@ export default function HomePage() {
     </main>
   );
 }
+

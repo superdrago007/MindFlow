@@ -40,6 +40,3 @@ async def get_profile_note(
 
 
 
-@note_router.get("/timecheck")
-async def time_check():
-    return {"Time Check": datetime.now(timezone.utc).isoformat()}

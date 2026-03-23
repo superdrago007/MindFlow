@@ -7,6 +7,7 @@ from app.config.db_config import engine, Base
 from app.models.Note_Model import Note
 from app.models.User_Model import User
 from app.models.Refresh_Token_Model import Refresh_Token
+from app.models.Tag_Model import Tag
 import logging
 
 app = FastAPI()
