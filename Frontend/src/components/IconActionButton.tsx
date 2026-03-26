@@ -22,12 +22,12 @@ export default function IconActionButton({
       title={label}
       aria-label={label}
       className={clsx(
-        "inline-flex items-center justify-center rounded-lg border transition",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex items-center justify-center rounded-xl border transition duration-200",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-60",
         compact ? "h-9 w-9" : "h-10 w-10",
         active
-          ? "border-indigo-600 bg-indigo-600 text-white shadow-sm"
-          : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100",
+          ? "border-transparent bg-[var(--accent)] text-white shadow-[var(--shadow-button)]"
+          : "glass-control text-[var(--text-secondary)] hover:bg-[color:var(--glass-surface)] hover:text-[var(--text-primary)]",
         className
       )}
       {...props}

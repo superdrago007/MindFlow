@@ -10,27 +10,27 @@ type TagChipProps = {
 };
 
 const toneClassName: Record<TagTone, string> = {
-  blue: "bg-blue-100 text-blue-700",
-  green: "bg-emerald-100 text-emerald-700",
-  purple: "bg-purple-100 text-purple-700",
-  orange: "bg-orange-100 text-orange-700",
-  pink: "bg-pink-100 text-pink-700",
-  slate: "bg-slate-100 text-slate-700"
+  blue: "border-[color:var(--tag-blue-border)] bg-[color:var(--tag-blue-bg)] text-[color:var(--tag-blue-text)]",
+  green: "border-[color:var(--tag-green-border)] bg-[color:var(--tag-green-bg)] text-[color:var(--tag-green-text)]",
+  purple: "border-[color:var(--tag-purple-border)] bg-[color:var(--tag-purple-bg)] text-[color:var(--tag-purple-text)]",
+  orange: "border-[color:var(--tag-orange-border)] bg-[color:var(--tag-orange-bg)] text-[color:var(--tag-orange-text)]",
+  pink: "border-[color:var(--tag-pink-border)] bg-[color:var(--tag-pink-bg)] text-[color:var(--tag-pink-text)]",
+  slate: "border-[color:var(--tag-slate-border)] bg-[color:var(--tag-slate-bg)] text-[color:var(--tag-slate-text)]"
 };
 
 export default function TagChip({ name, count, tone = "slate", onClick }: TagChipProps) {
   const content = `#${name}${typeof count === "number" ? ` (${count})` : ""}`;
 
   if (!onClick) {
-    return <span className={clsx("rounded-md px-2 py-1 text-xs font-medium", toneClassName[tone])}>{content}</span>;
+    return <span className={clsx("rounded-lg border px-2.5 py-1 text-xs font-semibold", toneClassName[tone])}>{content}</span>;
   }
 
   return (
     <button
       type="button"
       className={clsx(
-        "rounded-md px-2 py-1 text-xs font-medium transition hover:brightness-95",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
+        "rounded-lg border px-2.5 py-1 text-xs font-semibold transition duration-200 hover:brightness-105",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring)]",
         toneClassName[tone]
       )}
       onClick={onClick}

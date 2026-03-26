@@ -7,18 +7,16 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variantClassName: Record<ButtonVariant, string> = {
-  primary:
-    "bg-indigo-600 text-white hover:bg-indigo-700 focus-visible:ring-indigo-400 disabled:bg-indigo-400",
-  ghost:
-    "border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 focus-visible:ring-indigo-400"
+  primary: "bg-[var(--accent)] text-white shadow-[var(--shadow-button)] hover:bg-[var(--accent-strong)]",
+  ghost: "glass-control text-[var(--text-primary)] hover:bg-[color:var(--glass-surface)]"
 };
 
 export default function Button({ className, variant = "primary", ...props }: ButtonProps) {
   return (
     <button
       className={clsx(
-        "inline-flex h-11 w-full items-center justify-center rounded-lg px-4 font-body text-sm font-medium transition duration-200",
-        "focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed",
+        "inline-flex h-11 w-full items-center justify-center rounded-xl px-4 font-body text-sm font-semibold transition duration-200",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-60",
         variantClassName[variant],
         className
       )}

@@ -9,14 +9,14 @@ type StatTileProps = {
 
 export default function StatTile({ icon: Icon, label, value, gradientClassName }: StatTileProps) {
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <article className="glass-panel elevate-hover rounded-2xl p-4">
       <div className="flex items-center justify-between">
-        <div className={`inline-flex h-10 w-10 items-center justify-center rounded-lg ${gradientClassName}`}>
+        <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${gradientClassName} shadow-[var(--shadow-button)]`}>
           <Icon className="h-5 w-5 text-white" />
         </div>
-        <p className="font-display text-2xl text-slate-800">{value}</p>
+        <p className="font-display text-2xl text-[var(--text-primary)]">{value}</p>
       </div>
-      <p className="mt-3 text-sm text-slate-600">{label}</p>
+      <p className="mt-3 text-sm text-[var(--text-secondary)]">{label}</p>
     </article>
   );
 }

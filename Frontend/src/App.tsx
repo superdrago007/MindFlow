@@ -13,8 +13,8 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="grid min-h-screen place-items-center bg-ink-50 px-6 text-ink-700">
-        <p className="font-body text-sm uppercase tracking-[0.18em]">Loading session</p>
+      <div className="aurora-bg grid min-h-screen place-items-center px-6 text-[var(--text-secondary)]">
+        <p className="glass-panel rounded-2xl px-6 py-3 font-body text-sm uppercase tracking-[0.18em]">Loading session</p>
       </div>
     );
   }

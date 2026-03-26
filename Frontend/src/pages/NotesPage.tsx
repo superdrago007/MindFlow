@@ -40,6 +40,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import Button from "../components/Button";
 import IconActionButton from "../components/IconActionButton";
 import TagChip from "../components/TagChip";
+import ThemeToggleButton from "../components/ThemeToggleButton";
 import { useFeedback } from "../context/FeedbackContext";
 import api, { extractApiError } from "../lib/api";
 import type { NoteDetailResponse, SaveNoteRequest, SaveNoteResponse } from "../types/notes";
@@ -389,24 +390,25 @@ export default function NotesPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-6 font-body text-slate-800 sm:px-6">
-      <section className="mx-auto max-w-7xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-        <header className="border-b border-slate-200 p-4">
+    <main className="aurora-bg min-h-screen overflow-x-hidden px-4 py-5 font-body text-[var(--text-primary)] sm:px-6">
+      <section className="glass-panel-strong soft-glow mx-auto max-w-7xl overflow-hidden rounded-[1.75rem]">
+        <header className="border-b border-[var(--glass-border)] p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <button
               type="button"
-              className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-800"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
               onClick={() => navigate("/")}
             >
               <ChevronLeft className="h-4 w-4" />
               Back to Dashboard
             </button>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">{lastSavedLabel}</span>
+            <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
+              <span className="w-full text-right text-xs text-[var(--text-muted)] sm:w-auto sm:text-left">{lastSavedLabel}</span>
+              <ThemeToggleButton />
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-400"
+                className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white shadow-[var(--shadow-button)] transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={saveNote}
                 disabled={!editor || isSaving || isLoadingNote}
               >
@@ -417,6 +419,7 @@ export default function NotesPage() {
                 label="More Actions"
                 icon={MoreHorizontal}
                 onClick={() => showFeedback("More actions menu is coming soon.")}
+                className="text-[var(--text-primary)]"
               />
             </div>
           </div>
@@ -425,12 +428,12 @@ export default function NotesPage() {
             type="text"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            className="mt-4 w-full border-none px-0 font-display text-3xl text-slate-800 outline-none placeholder:text-slate-400"
+            className="mt-4 w-full border-none bg-transparent px-0 font-display text-3xl text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
             placeholder="Untitled Note"
           />
         </header>
 
-        <div className="note-toolbar border-b border-slate-200 bg-slate-50 px-3 py-2">
+        <div className="note-toolbar border-b border-[var(--glass-border)] px-3 py-2">
           <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
             {toolbarItems.map((item) => (
               <IconActionButton
@@ -446,13 +449,13 @@ export default function NotesPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 lg:divide-x lg:divide-slate-200">
+        <div className="grid grid-cols-1 lg:grid-cols-3 lg:divide-x lg:divide-[var(--glass-border)]">
           <section className="lg:col-span-2">
             <div className="note-editor px-5 py-6 sm:px-6">
               <EditorContent editor={editor} />
             </div>
 
-            <div className="border-t border-slate-200 px-5 py-4 sm:px-6">
+            <div className="border-t border-[var(--glass-border)] px-5 py-4 sm:px-6">
               <div className="grid gap-3 sm:grid-cols-2">
                 <Button onClick={printJson} disabled={!editor}>
                   Print JSON
@@ -464,32 +467,36 @@ export default function NotesPage() {
             </div>
           </section>
 
-          <aside className="bg-slate-50 p-4">
-            <h3 className="mb-4 flex items-center gap-2 font-semibold text-slate-800">
-              <Sparkles className="h-5 w-5 text-purple-600" />
+          <aside className="glass-panel p-4">
+            <h3 className="mb-4 flex items-center gap-2 font-semibold text-[var(--text-primary)]">
+              <Sparkles className="h-5 w-5 text-[var(--accent)]" />
               AI Assistant
             </h3>
 
             <section className="mb-5">
-              <p className="mb-2 text-sm font-medium text-slate-700">Tags</p>
+              <p className="mb-2 text-sm font-semibold text-[var(--text-secondary)]">Tags</p>
               <div className="mb-2 flex flex-wrap gap-2">
                 {tags.map((tag) => (
                   <TagChip key={tag} name={tag} tone="blue" onClick={() => showFeedback(`Tag selected: #${tag}`)} />
                 ))}
               </div>
-              <button type="button" className="text-sm font-medium text-indigo-600 hover:text-indigo-700" onClick={onAddTagClick}>
+              <button
+                type="button"
+                className="text-sm font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]"
+                onClick={onAddTagClick}
+              >
                 + Add tag
               </button>
             </section>
 
-            <section className="mb-4 rounded-xl border border-slate-200 bg-white p-3">
-              <p className="mb-2 text-sm font-medium text-slate-700">Suggested Tags</p>
+            <section className="glass-control mb-4 rounded-xl p-3">
+              <p className="mb-2 text-sm font-semibold text-[var(--text-secondary)]">Suggested Tags</p>
               <div className="flex flex-wrap gap-2">
                 {suggestedTags.map((tag) => (
                   <button
                     key={tag}
                     type="button"
-                    className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700 transition hover:bg-slate-200"
+                    className="rounded-lg border border-[var(--glass-border)] bg-[color:var(--glass-surface)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[color:var(--glass-surface-strong)]"
                     onClick={() => {
                       addTag(tag);
                       showFeedback(`Added #${tag}`, "success");
@@ -501,24 +508,24 @@ export default function NotesPage() {
               </div>
             </section>
 
-            <section className="mb-4 rounded-xl border border-slate-200 bg-white p-3">
-              <p className="mb-2 text-sm font-medium text-slate-700">Related Notes</p>
+            <section className="glass-control mb-4 rounded-xl p-3">
+              <p className="mb-2 text-sm font-semibold text-[var(--text-secondary)]">Related Notes</p>
               <div className="space-y-2">
                 <button
                   type="button"
-                  className="w-full rounded-lg bg-slate-50 p-2 text-left transition hover:bg-slate-100"
+                  className="elevate-hover w-full rounded-lg border border-[var(--glass-border)] bg-[color:var(--glass-surface)] p-2 text-left"
                   onClick={() => showFeedback("Opened related note: OAuth Implementation")}
                 >
-                  <p className="text-sm font-medium text-slate-700">OAuth Implementation</p>
-                  <p className="text-xs text-slate-500">Match 0.89</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">OAuth Implementation</p>
+                  <p className="text-xs text-[var(--text-muted)]">Match 0.89</p>
                 </button>
                 <button
                   type="button"
-                  className="w-full rounded-lg bg-slate-50 p-2 text-left transition hover:bg-slate-100"
+                  className="elevate-hover w-full rounded-lg border border-[var(--glass-border)] bg-[color:var(--glass-surface)] p-2 text-left"
                   onClick={() => showFeedback("Opened related note: Security Best Practices")}
                 >
-                  <p className="text-sm font-medium text-slate-700">Security Best Practices</p>
-                  <p className="text-xs text-slate-500">Match 0.76</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">Security Best Practices</p>
+                  <p className="text-xs text-[var(--text-muted)]">Match 0.76</p>
                 </button>
               </div>
             </section>
@@ -526,21 +533,21 @@ export default function NotesPage() {
             <div className="space-y-2">
               <button
                 type="button"
-                className="w-full rounded-lg bg-purple-50 px-3 py-2 text-sm font-medium text-purple-700 transition hover:bg-purple-100"
+                className="w-full rounded-xl border border-[var(--glass-border)] bg-[color:var(--tag-purple-bg)] px-3 py-2 text-sm font-semibold text-[color:var(--tag-purple-text)] transition hover:brightness-105"
                 onClick={() => showFeedback("Summary generation will be connected soon.")}
               >
                 Summarize Note
               </button>
               <button
                 type="button"
-                className="w-full rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-100"
+                className="w-full rounded-xl border border-[var(--glass-border)] bg-[color:var(--tag-blue-bg)] px-3 py-2 text-sm font-semibold text-[color:var(--tag-blue-text)] transition hover:brightness-105"
                 onClick={() => showFeedback("Connection discovery will be connected soon.")}
               >
                 Find Connections
               </button>
             </div>
 
-            <div className="mt-5 border-t border-slate-200 pt-4 text-xs text-slate-500">
+            <div className="mt-5 border-t border-[var(--glass-border)] pt-4 text-xs text-[var(--text-muted)]">
               <p>Word count: {wordCount}</p>
               <p>Reading time: ~1 min</p>
               <p>Created: Mar 18, 2026</p>

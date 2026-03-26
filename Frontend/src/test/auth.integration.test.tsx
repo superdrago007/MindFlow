@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import App from "../App";
 import { AuthProvider } from "../context/AuthContext";
+import { ThemeProvider } from "../context/ThemeContext";
 import { clearTokens, getTokens, tokenStoreSessionKey } from "../lib/tokenStore";
 
 const { postMock, getMock } = vi.hoisted(() => ({
@@ -27,9 +28,11 @@ vi.mock("../lib/api", () => ({
 function renderApp(initialPath: string) {
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </ThemeProvider>
     </MemoryRouter>
   );
 }
@@ -78,11 +81,11 @@ describe("auth integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Signed in")).toBeInTheDocument();
+      expect(screen.getByText(/Signed in as/i)).toBeInTheDocument();
     });
 
     expect(getTokens()?.accessToken).toBe("access-token");
-    expect(window.localStorage.length).toBe(0);
+    expect(window.localStorage.getItem(tokenStoreSessionKey())).toBeNull();
   });
 
   it("stores session in sessionStorage when remember me is checked", async () => {
@@ -98,11 +101,11 @@ describe("auth integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Create account" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Signed in")).toBeInTheDocument();
+      expect(screen.getByText(/Signed in as/i)).toBeInTheDocument();
     });
 
     expect(window.sessionStorage.getItem(tokenStoreSessionKey())).toContain("access-token-2");
-    expect(window.localStorage.length).toBe(0);
+    expect(window.localStorage.getItem(tokenStoreSessionKey())).toBeNull();
   });
 
   it("shows backend detail on login failure", async () => {

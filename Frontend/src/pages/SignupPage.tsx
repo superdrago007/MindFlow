@@ -61,7 +61,10 @@ export default function SignupPage() {
       subtitle="Set up access to your MindFlow backend in less than a minute."
       footer={
         <p>
-          Already registered? <Link className="font-semibold text-indigo-600 hover:text-indigo-700" to="/login">Sign in</Link>
+          Already registered?{" "}
+          <Link className="font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]" to="/login">
+            Sign in
+          </Link>
         </p>
       }
     >
@@ -108,17 +111,17 @@ export default function SignupPage() {
           onChange={setPassword}
         />
 
-        <label className="flex items-center gap-2 text-sm text-slate-600">
+        <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
           <input
             type="checkbox"
             checked={rememberMe}
             onChange={(event) => setRememberMe(event.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            className="h-4 w-4 rounded border-[var(--glass-border)] bg-transparent"
           />
           Remember me for this browser session
         </label>
 
-        {serverError ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{serverError}</p> : null}
+        {serverError ? <p className="rounded-xl border border-red-400/45 bg-red-500/12 px-3 py-2 text-sm text-red-500">{serverError}</p> : null}
 
         <Button type="submit" disabled={submitting}>
           {submitting ? "Creating account..." : "Create account"}

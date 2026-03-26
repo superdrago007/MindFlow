@@ -16,9 +16,9 @@ type FeedbackContextValue = {
 const FeedbackContext = createContext<FeedbackContextValue | undefined>(undefined);
 
 const toneClassName: Record<FeedbackTone, string> = {
-  info: "border-indigo-200 bg-indigo-50 text-indigo-800",
-  success: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  warning: "border-amber-200 bg-amber-50 text-amber-800"
+  info: "border-[color:var(--tone-info-border)] bg-[color:var(--tone-info-bg)] text-[color:var(--tone-info-text)]",
+  success: "border-[color:var(--tone-success-border)] bg-[color:var(--tone-success-bg)] text-[color:var(--tone-success-text)]",
+  warning: "border-[color:var(--tone-warning-border)] bg-[color:var(--tone-warning-bg)] text-[color:var(--tone-warning-text)]"
 };
 
 export function FeedbackProvider({ children }: { children: React.ReactNode }) {
@@ -49,12 +49,12 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
         <div className="pointer-events-none fixed right-4 top-4 z-50 w-[min(90vw,360px)]">
           <div
             role="status"
-            className={`pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-3 shadow-lg ${toneClassName[message.tone]}`}
+            className={`fade-up pointer-events-auto flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-[var(--shadow-panel)] backdrop-blur-md ${toneClassName[message.tone]}`}
           >
             <p className="flex-1 text-sm font-medium">{message.text}</p>
             <button
               type="button"
-              className="rounded-md p-1 transition hover:bg-black/5"
+              className="rounded-lg p-1 transition hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring)]"
               onClick={() => setMessage(null)}
               aria-label="Dismiss message"
             >

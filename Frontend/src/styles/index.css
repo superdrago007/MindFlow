@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -6,18 +6,128 @@
 
 :root {
   color-scheme: light;
+  --bg-base: #f3f7ff;
+  --bg-gradient-start: #f8faff;
+  --bg-gradient-mid: #eaf1ff;
+  --bg-gradient-end: #f7fbff;
+  --text-primary: #10203d;
+  --text-secondary: #405375;
+  --text-muted: #6b7d99;
+  --accent: #3b7cff;
+  --accent-strong: #2d66dc;
+  --focus-ring: rgba(59, 124, 255, 0.44);
+  --glass-surface: rgba(255, 255, 255, 0.66);
+  --glass-surface-strong: rgba(255, 255, 255, 0.84);
+  --glass-border: rgba(138, 160, 197, 0.36);
+  --soft-glow: rgba(76, 123, 255, 0.26);
+  --shadow-panel: 0 22px 56px rgba(15, 29, 56, 0.16);
+  --shadow-hover: 0 26px 64px rgba(15, 29, 56, 0.2);
+  --shadow-button: 0 10px 24px rgba(59, 124, 255, 0.34);
+  --tone-info-bg: rgba(61, 109, 251, 0.14);
+  --tone-info-border: rgba(61, 109, 251, 0.32);
+  --tone-info-text: #244ea5;
+  --tone-success-bg: rgba(37, 167, 128, 0.14);
+  --tone-success-border: rgba(37, 167, 128, 0.32);
+  --tone-success-text: #0f6f52;
+  --tone-warning-bg: rgba(237, 150, 42, 0.15);
+  --tone-warning-border: rgba(237, 150, 42, 0.33);
+  --tone-warning-text: #875311;
+  --tag-blue-bg: rgba(67, 124, 255, 0.15);
+  --tag-blue-border: rgba(67, 124, 255, 0.32);
+  --tag-blue-text: #1d4eb2;
+  --tag-green-bg: rgba(35, 169, 132, 0.15);
+  --tag-green-border: rgba(35, 169, 132, 0.3);
+  --tag-green-text: #0f7456;
+  --tag-purple-bg: rgba(123, 94, 248, 0.14);
+  --tag-purple-border: rgba(123, 94, 248, 0.3);
+  --tag-purple-text: #5a36b6;
+  --tag-orange-bg: rgba(245, 149, 54, 0.15);
+  --tag-orange-border: rgba(245, 149, 54, 0.3);
+  --tag-orange-text: #9f5314;
+  --tag-pink-bg: rgba(235, 96, 183, 0.14);
+  --tag-pink-border: rgba(235, 96, 183, 0.3);
+  --tag-pink-text: #9c2d73;
+  --tag-slate-bg: rgba(108, 125, 153, 0.15);
+  --tag-slate-border: rgba(108, 125, 153, 0.3);
+  --tag-slate-text: #3a4b68;
+  --editor-code-bg: rgba(154, 172, 204, 0.22);
+  --editor-pre-bg: #152033;
+  --editor-pre-text: #e6edff;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-base: #0a1020;
+  --bg-gradient-start: #0a1020;
+  --bg-gradient-mid: #101a32;
+  --bg-gradient-end: #0b1427;
+  --text-primary: #e8efff;
+  --text-secondary: #b7c7eb;
+  --text-muted: #8ea2cb;
+  --accent: #6aa5ff;
+  --accent-strong: #538fed;
+  --focus-ring: rgba(106, 165, 255, 0.5);
+  --glass-surface: rgba(18, 30, 53, 0.62);
+  --glass-surface-strong: rgba(23, 37, 64, 0.82);
+  --glass-border: rgba(143, 164, 204, 0.28);
+  --soft-glow: rgba(107, 165, 255, 0.34);
+  --shadow-panel: 0 24px 60px rgba(2, 7, 19, 0.62);
+  --shadow-hover: 0 28px 68px rgba(2, 7, 19, 0.72);
+  --shadow-button: 0 12px 28px rgba(16, 73, 177, 0.44);
+  --tone-info-bg: rgba(106, 165, 255, 0.2);
+  --tone-info-border: rgba(106, 165, 255, 0.34);
+  --tone-info-text: #d1e4ff;
+  --tone-success-bg: rgba(64, 194, 154, 0.2);
+  --tone-success-border: rgba(64, 194, 154, 0.36);
+  --tone-success-text: #c8fae8;
+  --tone-warning-bg: rgba(244, 179, 84, 0.2);
+  --tone-warning-border: rgba(244, 179, 84, 0.36);
+  --tone-warning-text: #ffe7c1;
+  --tag-blue-bg: rgba(95, 153, 255, 0.2);
+  --tag-blue-border: rgba(95, 153, 255, 0.36);
+  --tag-blue-text: #d6e6ff;
+  --tag-green-bg: rgba(70, 202, 162, 0.2);
+  --tag-green-border: rgba(70, 202, 162, 0.34);
+  --tag-green-text: #ccf9ea;
+  --tag-purple-bg: rgba(163, 124, 255, 0.2);
+  --tag-purple-border: rgba(163, 124, 255, 0.34);
+  --tag-purple-text: #eddefd;
+  --tag-orange-bg: rgba(255, 180, 103, 0.22);
+  --tag-orange-border: rgba(255, 180, 103, 0.34);
+  --tag-orange-text: #ffe2be;
+  --tag-pink-bg: rgba(255, 126, 214, 0.2);
+  --tag-pink-border: rgba(255, 126, 214, 0.34);
+  --tag-pink-text: #ffd8ef;
+  --tag-slate-bg: rgba(143, 164, 204, 0.2);
+  --tag-slate-border: rgba(143, 164, 204, 0.32);
+  --tag-slate-text: #d4def1;
+  --editor-code-bg: rgba(148, 170, 220, 0.24);
+  --editor-pre-bg: #060c18;
+  --editor-pre-text: #d9e4ff;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+}
+
+html,
+body {
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
-  min-height: 100vh;
-  font-family: "IBM Plex Sans", "Trebuchet MS", sans-serif;
-  background: #f8fafc;
-  color: #0f172a;
+  font-family: "Manrope", "Trebuchet MS", sans-serif;
+  background: linear-gradient(165deg, var(--bg-gradient-start), var(--bg-gradient-mid), var(--bg-gradient-end));
+  color: var(--text-primary);
 }
 
 a {
@@ -25,17 +135,136 @@ a {
   text-decoration: none;
 }
 
+button,
+input,
+textarea {
+  font-family: inherit;
+}
+
+input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+.aurora-bg {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+}
+
+.aurora-bg::before,
+.aurora-bg::after {
+  content: "";
+  position: absolute;
+  inset: -12%;
+  z-index: -1;
+  pointer-events: none;
+  filter: blur(44px);
+  opacity: 0.7;
+}
+
+.aurora-bg::before {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(46, 116, 255, 0.28), transparent 46%),
+    radial-gradient(circle at 86% 26%, rgba(0, 184, 155, 0.22), transparent 48%);
+  animation: aurora-drift 16s ease-in-out infinite alternate;
+}
+
+.aurora-bg::after {
+  background:
+    radial-gradient(circle at 14% 84%, rgba(241, 140, 56, 0.2), transparent 46%),
+    radial-gradient(circle at 78% 80%, rgba(151, 124, 255, 0.24), transparent 47%);
+  animation: aurora-pulse 13s ease-in-out infinite alternate;
+}
+
+.glass-panel {
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-panel);
+}
+
+.glass-panel-strong {
+  background: var(--glass-surface-strong);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-panel);
+}
+
+.glass-control {
+  background: var(--glass-surface-strong);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px);
+}
+
+.soft-glow {
+  box-shadow:
+    0 0 0 1px var(--glass-border),
+    0 22px 50px var(--soft-glow);
+}
+
+.elevate-hover {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
+}
+
+.elevate-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+.fade-up {
+  animation: fade-up 0.55s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-bg::before,
+  .aurora-bg::after,
+  .fade-up,
+  .elevate-hover {
+    animation: none;
+    transition: none;
+  }
+}
+
+@keyframes aurora-drift {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    transform: translate(2.5%, -1.8%) scale(1.05);
+  }
+}
+
+@keyframes aurora-pulse {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    transform: translate(-1.8%, 2.2%) scale(1.06);
+  }
+}
+
+@keyframes fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .note-editor .ProseMirror {
   min-height: 32rem;
   outline: none;
-  line-height: 1.6;
-  color: #334155;
+  line-height: 1.7;
+  color: var(--text-secondary);
 }
 
 .note-editor .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
-  color: #6f88ad;
+  color: var(--text-muted);
   pointer-events: none;
   height: 0;
 }
@@ -45,13 +274,13 @@ a {
 }
 
 .note-editor .ProseMirror p + p {
-  margin-top: 0.75rem;
+  margin-top: 0.8rem;
 }
 
 .note-editor .ProseMirror ul,
 .note-editor .ProseMirror ol {
   margin: 0.75rem 0;
-  padding-left: 1.25rem;
+  padding-left: 1.3rem;
 }
 
 .note-editor .ProseMirror ul {
@@ -63,7 +292,7 @@ a {
 }
 
 .note-editor .ProseMirror li {
-  margin: 0.2rem 0;
+  margin: 0.22rem 0;
 }
 
 .note-editor .ProseMirror ul[data-type="taskList"] {
@@ -85,16 +314,17 @@ a {
 .note-editor .ProseMirror h2,
 .note-editor .ProseMirror h3 {
   margin: 1rem 0 0.5rem;
-  line-height: 1.3;
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  line-height: 1.28;
+  font-family: "Sora", "Segoe UI", sans-serif;
+  color: var(--text-primary);
 }
 
 .note-editor .ProseMirror h1 {
-  font-size: 1.9rem;
+  font-size: 1.95rem;
 }
 
 .note-editor .ProseMirror h2 {
-  font-size: 1.45rem;
+  font-size: 1.48rem;
 }
 
 .note-editor .ProseMirror h3 {
@@ -103,13 +333,13 @@ a {
 
 .note-editor .ProseMirror blockquote {
   margin: 1rem 0;
-  padding-left: 0.9rem;
-  border-left: 3px solid #9eb4cf;
-  color: #3c5372;
+  padding-left: 0.95rem;
+  border-left: 3px solid var(--accent);
+  color: var(--text-secondary);
 }
 
 .note-editor .ProseMirror code {
-  background: #e5ecf5;
+  background: var(--editor-code-bg);
   border-radius: 0.35rem;
   padding: 0.12rem 0.35rem;
   font-family: "Cascadia Mono", "Consolas", monospace;
@@ -117,10 +347,10 @@ a {
 }
 
 .note-editor .ProseMirror pre {
-  background: #1a2432;
-  color: #f3f7fb;
-  padding: 0.9rem;
-  border-radius: 0.7rem;
+  background: var(--editor-pre-bg);
+  color: var(--editor-pre-text);
+  padding: 0.95rem;
+  border-radius: 0.8rem;
   overflow-x: auto;
   margin: 1rem 0;
 }
@@ -132,7 +362,7 @@ a {
 }
 
 .note-editor .ProseMirror a {
-  color: #4f46e5;
+  color: var(--accent);
   text-decoration: underline;
 }
 
@@ -141,11 +371,11 @@ a {
 }
 
 .note-toolbar ::-webkit-scrollbar-track {
-  background: #e2e8f0;
+  background: color-mix(in srgb, var(--glass-surface) 84%, transparent);
   border-radius: 9999px;
 }
 
 .note-toolbar ::-webkit-scrollbar-thumb {
-  background: #94a3b8;
+  background: color-mix(in srgb, var(--text-muted) 72%, transparent);
   border-radius: 9999px;
 }

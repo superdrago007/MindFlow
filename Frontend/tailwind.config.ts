@@ -35,8 +35,8 @@ const config: Config = {
         panel: "1.25rem"
       },
       fontFamily: {
-        display: ['"Space Grotesk"', "Segoe UI", "sans-serif"],
-        body: ['"IBM Plex Sans"', "Trebuchet MS", "sans-serif"]
+        display: ['"Sora"', '"Segoe UI"', "sans-serif"],
+        body: ['"Manrope"', '"Trebuchet MS"', "sans-serif"]
       }
     }
   },

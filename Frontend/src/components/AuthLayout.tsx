@@ -1,6 +1,7 @@
 import { BookOpen, Sparkles } from "lucide-react";
-import { Link } from "react-router-dom";
 import type { PropsWithChildren } from "react";
+import { Link } from "react-router-dom";
+import ThemeToggleButton from "./ThemeToggleButton";
 
 type AuthLayoutProps = PropsWithChildren<{
   mode: "login" | "signup";
@@ -11,50 +12,61 @@ type AuthLayoutProps = PropsWithChildren<{
 
 export default function AuthLayout({ mode, title, subtitle, footer, children }: AuthLayoutProps) {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 font-body text-slate-800">
-      <section className="mx-auto grid min-h-screen w-full max-w-6xl grid-cols-1 gap-8 px-6 py-10 lg:grid-cols-[1.05fr_0.95fr] lg:px-10">
-        <div className="hidden flex-col justify-between rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-8 text-white shadow-xl lg:flex">
+    <main className="aurora-bg min-h-screen px-4 py-6 font-body text-[var(--text-primary)] sm:px-6 sm:py-10">
+      <section className="mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-6xl grid-cols-1 gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8">
+        <aside className="glass-panel-strong soft-glow hidden flex-col justify-between rounded-[2rem] p-8 text-[var(--text-primary)] lg:flex">
           <div>
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15">
-              <BookOpen className="h-7 w-7" />
+            <div className="mb-6">
+              <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent)] text-white shadow-[var(--shadow-button)]">
+                <BookOpen className="h-7 w-7" />
+              </div>
             </div>
-            <h1 className="mt-6 font-display text-4xl leading-tight">MindFlow</h1>
-            <p className="mt-3 max-w-sm text-sm text-indigo-100/85">Your AI-powered second brain for connected notes and focused workflows.</p>
+            <h1 className="font-display text-4xl leading-tight">MindFlow</h1>
+            <p className="mt-4 max-w-sm text-sm text-[var(--text-secondary)]">
+              Shape your ideas into connected insight. Track notes, discover links, and stay in focused flow.
+            </p>
           </div>
 
-          <div className="rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-sm">
+          <div className="glass-panel rounded-2xl p-5">
             <div className="flex items-start gap-3">
-              <Sparkles className="mt-0.5 h-5 w-5 text-indigo-200" />
-              <p className="text-sm text-indigo-100/85">
-                Sessions are protected with token validation. Expired access is handled automatically.
+              <Sparkles className="mt-0.5 h-5 w-5 text-[var(--accent)]" />
+              <p className="text-sm text-[var(--text-secondary)]">
+                Token refresh and session checks keep your workspace protected while you stay focused on writing.
               </p>
             </div>
           </div>
-        </div>
+        </aside>
 
         <div className="my-auto">
-          <div className="mx-auto w-full max-w-md rounded-3xl bg-white p-6 shadow-xl sm:p-8">
-            <div className="mb-6 text-center">
-              <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600">
-                <BookOpen className="h-7 w-7 text-white" />
+          <div className="glass-panel-strong mx-auto w-full max-w-md rounded-[2rem] p-6 sm:p-8">
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent)] text-white shadow-[var(--shadow-button)]">
+                  <BookOpen className="h-7 w-7" />
+                </div>
+                <h2 className="mt-4 font-display text-3xl">MindFlow</h2>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">Secure access to your workspace</p>
               </div>
-              <h2 className="mt-4 font-display text-3xl text-slate-800">MindFlow</h2>
-              <p className="mt-1 text-sm text-slate-500">Secure access to your workspace</p>
+              <ThemeToggleButton />
             </div>
 
-            <div className="mb-6 grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
+            <div className="glass-control mb-6 grid grid-cols-2 gap-2 rounded-xl p-1">
               <Link
                 to="/login"
-                className={`rounded-lg px-3 py-2 text-center text-sm font-medium transition ${
-                  mode === "login" ? "bg-indigo-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-200"
+                className={`rounded-lg px-3 py-2 text-center text-sm font-semibold transition ${
+                  mode === "login"
+                    ? "bg-[var(--accent)] text-white shadow-[var(--shadow-button)]"
+                    : "text-[var(--text-secondary)] hover:bg-[color:var(--glass-surface)]"
                 }`}
               >
                 Login
               </Link>
               <Link
                 to="/signup"
-                className={`rounded-lg px-3 py-2 text-center text-sm font-medium transition ${
-                  mode === "signup" ? "bg-indigo-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-200"
+                className={`rounded-lg px-3 py-2 text-center text-sm font-semibold transition ${
+                  mode === "signup"
+                    ? "bg-[var(--accent)] text-white shadow-[var(--shadow-button)]"
+                    : "text-[var(--text-secondary)] hover:bg-[color:var(--glass-surface)]"
                 }`}
               >
                 Sign Up
@@ -62,12 +74,12 @@ export default function AuthLayout({ mode, title, subtitle, footer, children }: 
             </div>
 
             <header>
-              <h3 className="font-display text-2xl text-slate-800">{title}</h3>
-              <p className="mt-1 text-sm text-slate-600">{subtitle}</p>
+              <h3 className="font-display text-2xl">{title}</h3>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">{subtitle}</p>
             </header>
 
             <div className="mt-6">{children}</div>
-            <footer className="mt-6 border-t border-slate-200 pt-4 text-sm text-slate-600">{footer}</footer>
+            <footer className="mt-6 border-t border-[var(--glass-border)] pt-4 text-sm text-[var(--text-secondary)]">{footer}</footer>
           </div>
         </div>
       </section>

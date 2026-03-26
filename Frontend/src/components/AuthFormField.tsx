@@ -23,7 +23,7 @@ export default function AuthFormField({
 }: AuthFormFieldProps) {
   return (
     <div>
-      <label htmlFor={id} className="mb-2 block font-body text-sm font-medium text-slate-700">
+      <label htmlFor={id} className="mb-2 block font-body text-sm font-semibold text-[var(--text-secondary)]">
         {label}
       </label>
       <input
@@ -34,13 +34,13 @@ export default function AuthFormField({
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         className={clsx(
-          "h-11 w-full rounded-lg border px-3 text-sm text-slate-900 outline-none transition",
+          "glass-control h-11 w-full rounded-xl px-3 text-sm text-[var(--text-primary)] outline-none transition placeholder:text-[var(--text-muted)]",
           error
-            ? "border-red-400 bg-red-50 focus:border-red-500"
-            : "border-slate-300 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            ? "border-red-400 bg-red-500/10 focus:border-red-400 focus:ring-2 focus:ring-red-300/35"
+            : "focus:border-[color:var(--accent)] focus:ring-2 focus:ring-[color:var(--focus-ring)]"
         )}
       />
-      {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="mt-2 text-xs text-red-500">{error}</p> : null}
     </div>
   );
 }
