@@ -18,7 +18,15 @@ type AuthHandlers = {
 };
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "/api";
-const publicAuthPaths = ["/auth/login", "/auth/signup", "/auth/refresh"];
+const publicAuthPaths = [
+  "/auth/login",
+  "/auth/signup",
+  "/auth/refresh",
+  "/forgotPassword/verifyEmail",
+  "/forgotPassword/sendotp",
+  "/forgotPassword/verifyotp",
+  "/forgotPassword/resetPassword"
+];
 
 const handlers: AuthHandlers = {};
 let refreshPromise: Promise<AuthSession> | null = null;

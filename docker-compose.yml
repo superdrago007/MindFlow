@@ -20,6 +20,22 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: mindflow-redis
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./Redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - mindflow-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   mindflow-backend:
     build:
       context: .
@@ -33,9 +49,17 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - DATABASE_URL=postgresql://drago:Soham123@postgres:5432/mindflow_db
+      - REDIS_URL=redis://redis:6379/0
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-}
     command: uvicorn app.Main_router:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - mindflow-network

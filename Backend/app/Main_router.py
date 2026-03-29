@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.routers.auth_router import auth_router
+from app.routers.forgot_password_router import forgot_password_router
 from app.routers.note_router import note_router
 from app.routers.profile_router import profile_router
 from app.config.db_config import engine, Base
@@ -16,6 +17,7 @@ app = FastAPI()
 Base.metadata.create_all(bind=engine)
 
 app.include_router(auth_router)
+app.include_router(forgot_password_router)
 app.include_router(profile_router)
 app.include_router(note_router)
 

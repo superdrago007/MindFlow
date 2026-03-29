@@ -4,13 +4,21 @@ import { Link } from "react-router-dom";
 import ThemeToggleButton from "./ThemeToggleButton";
 
 type AuthLayoutProps = PropsWithChildren<{
-  mode: "login" | "signup";
+  mode?: "login" | "signup";
   title: string;
   subtitle: string;
   footer: React.ReactNode;
+  showModeTabs?: boolean;
 }>;
 
-export default function AuthLayout({ mode, title, subtitle, footer, children }: AuthLayoutProps) {
+export default function AuthLayout({
+  mode = "login",
+  title,
+  subtitle,
+  footer,
+  children,
+  showModeTabs = true
+}: AuthLayoutProps) {
   return (
     <main className="aurora-bg min-h-screen px-4 py-6 font-body text-[var(--text-primary)] sm:px-6 sm:py-10">
       <section className="mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-6xl grid-cols-1 gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8">
@@ -50,28 +58,30 @@ export default function AuthLayout({ mode, title, subtitle, footer, children }: 
               <ThemeToggleButton />
             </div>
 
-            <div className="glass-control mb-6 grid grid-cols-2 gap-2 rounded-xl p-1">
-              <Link
-                to="/login"
-                className={`rounded-lg px-3 py-2 text-center text-sm font-semibold transition ${
-                  mode === "login"
-                    ? "bg-[var(--accent)] text-white shadow-[var(--shadow-button)]"
-                    : "text-[var(--text-secondary)] hover:bg-[color:var(--glass-surface)]"
-                }`}
-              >
-                Login
-              </Link>
-              <Link
-                to="/signup"
-                className={`rounded-lg px-3 py-2 text-center text-sm font-semibold transition ${
-                  mode === "signup"
-                    ? "bg-[var(--accent)] text-white shadow-[var(--shadow-button)]"
-                    : "text-[var(--text-secondary)] hover:bg-[color:var(--glass-surface)]"
-                }`}
-              >
-                Sign Up
-              </Link>
-            </div>
+            {showModeTabs ? (
+              <div className="glass-control mb-6 grid grid-cols-2 gap-2 rounded-xl p-1">
+                <Link
+                  to="/login"
+                  className={`rounded-lg px-3 py-2 text-center text-sm font-semibold transition ${
+                    mode === "login"
+                      ? "bg-[var(--accent)] text-white shadow-[var(--shadow-button)]"
+                      : "text-[var(--text-secondary)] hover:bg-[color:var(--glass-surface)]"
+                  }`}
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/signup"
+                  className={`rounded-lg px-3 py-2 text-center text-sm font-semibold transition ${
+                    mode === "signup"
+                      ? "bg-[var(--accent)] text-white shadow-[var(--shadow-button)]"
+                      : "text-[var(--text-secondary)] hover:bg-[color:var(--glass-surface)]"
+                  }`}
+                >
+                  Sign Up
+                </Link>
+              </div>
+            ) : null}
 
             <header>
               <h3 className="font-display text-2xl">{title}</h3>

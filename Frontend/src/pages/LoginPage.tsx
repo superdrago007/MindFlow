@@ -3,14 +3,12 @@ import AuthFormField from "../components/AuthFormField";
 import AuthLayout from "../components/AuthLayout";
 import Button from "../components/Button";
 import { useAuth } from "../context/AuthContext";
-import { useFeedback } from "../context/FeedbackContext";
 import { validateLoginForm } from "../lib/validation";
 import { useState } from "react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const { showFeedback } = useFeedback();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -89,13 +87,9 @@ export default function LoginPage() {
             />
             Remember me for this browser session
           </label>
-          <button
-            type="button"
-            className="font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]"
-            onClick={() => showFeedback("Forgot password flow will be added soon.", "info")}
-          >
+          <Link to="/verifyEmail" className="font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]">
             Forgot password?
-          </button>
+          </Link>
         </div>
 
         {serverError ? <p className="rounded-xl border border-red-400/45 bg-red-500/12 px-3 py-2 text-sm text-red-500">{serverError}</p> : null}

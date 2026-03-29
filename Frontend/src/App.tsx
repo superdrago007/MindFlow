@@ -4,7 +4,10 @@ import { FeedbackProvider } from "./context/FeedbackContext";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import NotesPage from "./pages/NotesPage";
+import OtpPage from "./pages/OtpPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import SignupPage from "./pages/SignupPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import PublicRoute from "./routes/PublicRoute";
 
@@ -25,6 +28,9 @@ function App() {
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/verifyEmail" element={<VerifyEmailPage />} />
+          <Route path="/otp" element={<OtpPage />} />
+          <Route path="/resetPassword" element={<ResetPasswordPage />} />
         </Route>
 
         <Route element={<ProtectedRoute />}>

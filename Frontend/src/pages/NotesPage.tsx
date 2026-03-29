@@ -51,20 +51,7 @@ const emptyNoteContent = {
 };
 
 const initialContent = `
-  <h1>Meeting Agenda</h1>
-  <p>Today we discussed the implementation of the new authentication system. Key points:</p>
-  <ul>
-    <li>Move to JWT-based authentication</li>
-    <li>Implement refresh token rotation</li>
-    <li>Prepare OAuth2 hooks for future use</li>
-  </ul>
-  <h2>Action Items</h2>
-  <ul data-type="taskList">
-    <li data-type="taskItem" data-checked="false"><p>Research JWT libraries for FastAPI</p></li>
-    <li data-type="taskItem" data-checked="false"><p>Design refresh token schema</p></li>
-    <li data-type="taskItem" data-checked="true"><p>Review OAuth2 documentation</p></li>
-  </ul>
-  <blockquote><p>Remember to consider rate-limiting for login attempts.</p></blockquote>
+  <h1>Content</h1>
 `;
 
 const suggestedTags = ["security", "authentication", "planning"];
@@ -111,7 +98,7 @@ export default function NotesPage() {
   const { showFeedback } = useFeedback();
   const requestedNoteId = searchParams.get("noteId");
 
-  const [title, setTitle] = useState("Project Planning Meeting");
+  const [title, setTitle] = useState("Title");
   const [tags, setTags] = useState<string[]>(["work", "planning", "backend"]);
   const [noteId, setNoteId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);

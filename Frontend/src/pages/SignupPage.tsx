@@ -121,6 +121,12 @@ export default function SignupPage() {
           Remember me for this browser session
         </label>
 
+        <div className="text-sm">
+          <Link className="font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]" to="/verifyEmail">
+            Forgot password?
+          </Link>
+        </div>
+
         {serverError ? <p className="rounded-xl border border-red-400/45 bg-red-500/12 px-3 py-2 text-sm text-red-500">{serverError}</p> : null}
 
         <Button type="submit" disabled={submitting}>

@@ -184,29 +184,42 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
-              <ThemeToggleButton />
-              <IconActionButton
-                label="Notifications"
-                icon={Bell}
-                onClick={() => showFeedback("Notifications panel is coming soon.")}
-                className="text-[var(--text-primary)]"
-              />
-              <IconActionButton
-                label="Settings"
-                icon={Settings}
-                onClick={() => showFeedback("Settings UI is coming soon.")}
-                className="text-[var(--text-primary)]"
-              />
-              <IconActionButton
-                label="Profile"
-                icon={User}
-                onClick={() => showFeedback(`Logged in as ${displayEmail}.`, "success")}
-                className="text-[var(--text-primary)]"
-              />
-              <Button className="w-auto px-4" variant="ghost" onClick={onLogout}>
-                Logout
-              </Button>
+            <div className="w-full sm:w-auto">
+              <div className="glass-control flex w-full flex-wrap items-center justify-end gap-2 rounded-2xl border border-[var(--glass-border)] bg-[color:var(--glass-surface-strong)] p-2 shadow-[0_14px_30px_rgba(16,29,58,0.16)] sm:w-auto sm:flex-nowrap sm:gap-2.5">
+                <div className="inline-flex items-center gap-1 rounded-xl bg-[color:var(--glass-surface)] px-1.5 py-1">
+                  <ThemeToggleButton compact className="text-[var(--text-primary)]" />
+                  <IconActionButton
+                    compact
+                    label="Notifications"
+                    icon={Bell}
+                    onClick={() => showFeedback("Notifications panel is coming soon.")}
+                    className="text-[var(--text-primary)]"
+                  />
+                </div>
+
+                <div className="inline-flex items-center gap-1 rounded-xl bg-[color:var(--glass-surface)] px-1.5 py-1">
+                  <IconActionButton
+                    compact
+                    label="Settings"
+                    icon={Settings}
+                    onClick={() => showFeedback("Settings UI is coming soon.")}
+                    className="text-[var(--text-primary)]"
+                  />
+                  <IconActionButton
+                    compact
+                    label="Profile"
+                    icon={User}
+                    onClick={() => showFeedback(`Logged in as ${displayEmail}.`, "success")}
+                    className="text-[var(--text-primary)]"
+                  />
+                </div>
+
+                <span className="hidden h-8 w-px bg-[var(--glass-border)] sm:block" aria-hidden="true" />
+
+                <Button className="h-10 w-full px-4 sm:w-auto sm:min-w-[104px] sm:px-5" variant="ghost" onClick={onLogout}>
+                  Logout
+                </Button>
+              </div>
             </div>
           </div>
 
