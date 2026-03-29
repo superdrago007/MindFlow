@@ -279,20 +279,31 @@ export default function HomePage() {
               ) : null}
 
               {!recentNotesLoading && !recentNotesError
-                ? recentNotes.map((note) => (
-                    <button
-                      key={note.note_id}
-                      type="button"
-                      onClick={() => navigate(`/notes?noteId=${encodeURIComponent(note.note_id)}`)}
-                      className="glass-control elevate-hover w-full rounded-xl p-4 text-left"
-                    >
-                      <h3 className="break-words font-semibold text-[var(--text-primary)]">{note.title}</h3>
-                      <p className="mt-2 break-words text-sm text-[var(--text-secondary)]">{note.preview}</p>
-                      <div className="mt-3 flex items-center justify-end">
-                        <span className="text-xs text-[var(--text-muted)]">{note.time}</span>
-                      </div>
-                    </button>
-                  ))
+                ? recentNotes.map((note) => {
+                    const noteTags = Array.isArray(note.tags) ? note.tags : [];
+
+                    return (
+                      <button
+                        key={note.note_id}
+                        type="button"
+                        onClick={() => navigate(`/notes?noteId=${encodeURIComponent(note.note_id)}`)}
+                        className="glass-control elevate-hover w-full rounded-xl p-4 text-left"
+                      >
+                        <h3 className="break-words font-semibold text-[var(--text-primary)]">{note.title}</h3>
+                        <p className="mt-2 break-words text-sm text-[var(--text-secondary)]">{note.preview}</p>
+                        {noteTags.length > 0 ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {noteTags.map((tag) => (
+                              <TagChip key={tag.tag_id} name={tag.name} color={tag.color} />
+                            ))}
+                          </div>
+                        ) : null}
+                        <div className="mt-3 flex items-center justify-end">
+                          <span className="text-xs text-[var(--text-muted)]">{note.time}</span>
+                        </div>
+                      </button>
+                    );
+                  })
                 : null}
             </div>
           </section>

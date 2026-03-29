@@ -4,17 +4,51 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.Note_Model import Note
+from app.models.Tag_Model import Tag
 from app.schemas.Note_schema import SaveNoteRequest
 from app.utils.auth_utils import extract_user_id_from_token
 
 logger = logging.getLogger(__name__)
 
 
+def _deduplicate_tag_ids(tag_ids: list[UUID] | None) -> list[UUID]:
+    if not tag_ids:
+        return []
+
+    return list(dict.fromkeys(tag_ids))
+
+
+def _load_user_tags_by_ids(tag_ids: list[UUID], user_id: int, db: Session) -> dict[UUID, Tag]:
+    if not tag_ids:
+        return {}
+
+    tags = db.query(Tag).filter(Tag.user_id == user_id, Tag.tag_id.in_(tag_ids)).all()
+    if len(tags) != len(tag_ids):
+        raise HTTPException(status_code=400, detail="One or more selected tags are invalid")
+
+    return {tag.tag_id: tag for tag in tags}
+
+
+def _serialize_note_tags(note: Note) -> list[dict]:
+    ordered_tags = sorted(note.tags, key=lambda tag: tag.name.lower())
+    return [
+        {
+            "tag_id": tag.tag_id,
+            "name": tag.name,
+            "color": tag.color,
+        }
+        for tag in ordered_tags
+    ]
+
+
 async def save_note(note_payload: SaveNoteRequest, current_user: dict, db: Session):
     user_id = extract_user_id_from_token(current_user)
+    selected_tag_ids = _deduplicate_tag_ids(note_payload.tag_ids)
+    tags_by_id = _load_user_tags_by_ids(selected_tag_ids, user_id, db)
+    selected_tags = [tags_by_id[tag_id] for tag_id in selected_tag_ids]
 
     try:
         if note_payload.note_id is None:
@@ -23,6 +57,7 @@ async def save_note(note_payload: SaveNoteRequest, current_user: dict, db: Sessi
                 title=note_payload.title,
                 content=note_payload.content,
             )
+            new_note.tags = selected_tags
             db.add(new_note)
             db.commit()
             db.refresh(new_note)
@@ -37,6 +72,7 @@ async def save_note(note_payload: SaveNoteRequest, current_user: dict, db: Sessi
 
         existing_note = (
             db.query(Note)
+            .options(selectinload(Note.tags))
             .filter(Note.note_id == note_payload.note_id, Note.user_id == user_id)
             .first()
         )
@@ -47,6 +83,7 @@ async def save_note(note_payload: SaveNoteRequest, current_user: dict, db: Sessi
         existing_note.title = note_payload.title
         existing_note.content = note_payload.content
         existing_note.updated_at = datetime.now(timezone.utc)
+        existing_note.tags = selected_tags
 
         db.commit()
         db.refresh(existing_note)
@@ -142,6 +179,7 @@ async def get_recent_notes(current_user: dict, db: Session, limit: int = 5):
     try:
         notes = (
             db.query(Note)
+            .options(selectinload(Note.tags))
             .filter(Note.user_id == user_id)
             .order_by(func.coalesce(Note.updated_at, Note.created_at).desc())
             .limit(safe_limit)
@@ -160,6 +198,7 @@ async def get_recent_notes(current_user: dict, db: Session, limit: int = 5):
                     "title": note_title,
                     "preview": _truncate_preview(note_preview_text, 160),
                     "time": _format_relative_time(note_timestamp),
+                    "tags": _serialize_note_tags(note),
                 }
             )
 
@@ -174,7 +213,12 @@ async def get_note_by_id(note_id: UUID, current_user: dict, db: Session):
     user_id = extract_user_id_from_token(current_user)
 
     try:
-        note = db.query(Note).filter(Note.note_id == note_id, Note.user_id == user_id).first()
+        note = (
+            db.query(Note)
+            .options(selectinload(Note.tags))
+            .filter(Note.note_id == note_id, Note.user_id == user_id)
+            .first()
+        )
         if not note:
             raise HTTPException(status_code=404, detail="Note not found")
 
@@ -183,6 +227,7 @@ async def get_note_by_id(note_id: UUID, current_user: dict, db: Session):
             "title": note.title,
             "title_text": _extract_plain_text(note.title, "Untitled Note"),
             "content": note.content,
+            "tags": _serialize_note_tags(note),
             "created_at": note.created_at,
             "updated_at": note.updated_at,
             "last_viewed_at": note.last_viewed_at,

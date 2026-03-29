@@ -44,6 +44,7 @@ import ThemeToggleButton from "../components/ThemeToggleButton";
 import { useFeedback } from "../context/FeedbackContext";
 import api, { extractApiError } from "../lib/api";
 import type { NoteDetailResponse, SaveNoteRequest, SaveNoteResponse } from "../types/notes";
+import type { CreateTagRequest, TagItem, TagListResponse, UpdateTagRequest } from "../types/tags";
 
 const emptyNoteContent = {
   type: "doc",
@@ -53,8 +54,6 @@ const emptyNoteContent = {
 const initialContent = `
   <h1>Content</h1>
 `;
-
-const suggestedTags = ["security", "authentication", "planning"];
 
 type ToolbarItem = {
   id: string;
@@ -92,6 +91,12 @@ function formatLastSavedLabel(timestamp?: string | null): string {
   return `Last saved: ${savedAt}`;
 }
 
+function sortTagsByName(tags: TagItem[]): TagItem[] {
+  return [...tags].sort((firstTag, secondTag) =>
+    firstTag.name.localeCompare(secondTag.name, undefined, { sensitivity: "base" })
+  );
+}
+
 export default function NotesPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -99,12 +104,22 @@ export default function NotesPage() {
   const requestedNoteId = searchParams.get("noteId");
 
   const [title, setTitle] = useState("Title");
-  const [tags, setTags] = useState<string[]>(["work", "planning", "backend"]);
   const [noteId, setNoteId] = useState<string | null>(null);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<TagItem[]>([]);
+  const [isLoadingTags, setIsLoadingTags] = useState(false);
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
+  const [updatingTagIds, setUpdatingTagIds] = useState<Set<string>>(new Set());
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagDescription, setNewTagDescription] = useState("");
+  const [newTagColor, setNewTagColor] = useState("");
+  const [tagNameError, setTagNameError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingNote, setIsLoadingNote] = useState(false);
   const [lastSavedLabel, setLastSavedLabel] = useState("Last saved: Not yet");
   const [selectedButtons, setSelectedButtons] = useState<Set<string>>(new Set());
+
+  const selectedTagIdSet = useMemo(() => new Set(selectedTagIds), [selectedTagIds]);
 
   const editor = useEditor({
     extensions: [
@@ -129,6 +144,36 @@ export default function NotesPage() {
   });
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadTags = async () => {
+      setIsLoadingTags(true);
+      try {
+        const response = await api.get<TagListResponse>("/profile/tags");
+        if (!cancelled) {
+          const tags = Array.isArray(response.data) ? response.data : [];
+          setAvailableTags(sortTagsByName(tags));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAvailableTags([]);
+          showFeedback(extractApiError(error), "warning");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingTags(false);
+        }
+      }
+    };
+
+    void loadTags();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showFeedback]);
+
+  useEffect(() => {
     if (!editor || !requestedNoteId) {
       return;
     }
@@ -147,6 +192,7 @@ export default function NotesPage() {
         const note = response.data;
         setNoteId(note.note_id);
         setTitle(note.title_text || "Untitled Note");
+        setSelectedTagIds((note.tags ?? []).map((tag) => tag.tag_id));
         setLastSavedLabel(formatLastSavedLabel(note.updated_at ?? note.created_at));
         editor.commands.setContent(note.content);
       } catch (error) {
@@ -286,6 +332,103 @@ export default function NotesPage() {
     [editor]
   );
 
+  const markTagUpdating = (tagId: string, shouldMark: boolean) => {
+    setUpdatingTagIds((current) => {
+      const next = new Set(current);
+      if (shouldMark) {
+        next.add(tagId);
+      } else {
+        next.delete(tagId);
+      }
+      return next;
+    });
+  };
+
+  const toggleTagSelection = (tagId: string) => {
+    setSelectedTagIds((current) => {
+      if (current.includes(tagId)) {
+        return current.filter((item) => item !== tagId);
+      }
+      return [...current, tagId];
+    });
+  };
+
+  const updateTagColor = async (tag: TagItem, color: string | null) => {
+    markTagUpdating(tag.tag_id, true);
+    try {
+      const payload: UpdateTagRequest = { color };
+      const response = await api.patch<TagItem>(`/profile/tags/${encodeURIComponent(tag.tag_id)}`, payload);
+      const updatedTag = response.data;
+
+      setAvailableTags((current) =>
+        sortTagsByName(current.map((item) => (item.tag_id === updatedTag.tag_id ? updatedTag : item)))
+      );
+      showFeedback(`Updated color for #${updatedTag.name}.`, "success");
+    } catch (error) {
+      showFeedback(extractApiError(error), "warning");
+    } finally {
+      markTagUpdating(tag.tag_id, false);
+    }
+  };
+
+  const onTagColorSelect = (tag: TagItem, nextColor: string) => {
+    const normalizedColor = nextColor.trim().toUpperCase();
+    if ((tag.color ?? "").toUpperCase() === normalizedColor) {
+      return;
+    }
+    void updateTagColor(tag, normalizedColor);
+  };
+
+  const onTagColorClear = (tag: TagItem) => {
+    if (!tag.color) {
+      return;
+    }
+    void updateTagColor(tag, null);
+  };
+
+  const onCreateTag = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const normalizedName = newTagName.trim();
+    if (!normalizedName) {
+      setTagNameError("Tag name is required");
+      return;
+    }
+
+    setTagNameError(null);
+    setIsCreatingTag(true);
+
+    try {
+      const payload: CreateTagRequest = {
+        name: normalizedName
+      };
+
+      const normalizedDescription = newTagDescription.trim();
+      if (normalizedDescription) {
+        payload.description = normalizedDescription;
+      }
+
+      const normalizedColor = newTagColor.trim().toUpperCase();
+      if (normalizedColor) {
+        payload.color = normalizedColor;
+      }
+
+      const response = await api.post<TagItem>("/profile/tags", payload);
+      const createdTag = response.data;
+
+      setAvailableTags((current) => sortTagsByName([...current, createdTag]));
+      setSelectedTagIds((current) => (current.includes(createdTag.tag_id) ? current : [...current, createdTag.tag_id]));
+      setNewTagName("");
+      setNewTagDescription("");
+      setNewTagColor("");
+      showFeedback(`Created tag #${createdTag.name}.`, "success");
+    } catch (error) {
+      showFeedback(extractApiError(error), "warning");
+    } finally {
+      setIsCreatingTag(false);
+    }
+  };
+
   const saveNote = async () => {
     if (!editor || isSaving || isLoadingNote) {
       return;
@@ -297,6 +440,7 @@ export default function NotesPage() {
       const payload: SaveNoteRequest = {
         title: buildTitleDocument(title),
         content: editor.getJSON() as Record<string, unknown>,
+        tag_ids: selectedTagIds,
         ...(noteId ? { note_id: noteId } : {})
       };
 
@@ -330,25 +474,10 @@ export default function NotesPage() {
     navigate("/notes", { replace: true });
     setNoteId(null);
     setTitle("Untitled Note");
+    setSelectedTagIds([]);
     setLastSavedLabel("Last saved: Not yet");
     editor.chain().focus().setContent(emptyNoteContent).run();
     showFeedback("Opened a fresh note canvas.", "success");
-  };
-
-  const addTag = (nextTag: string) => {
-    const normalized = nextTag.trim().toLowerCase();
-    if (!normalized || tags.includes(normalized)) {
-      return;
-    }
-    setTags((current) => [...current, normalized]);
-  };
-
-  const onAddTagClick = () => {
-    const response = window.prompt("Add tag");
-    if (!response) {
-      return;
-    }
-    addTag(response);
   };
 
   const wordCount = editor?.getText().trim().split(/\s+/).filter(Boolean).length ?? 0;
@@ -461,38 +590,113 @@ export default function NotesPage() {
             </h3>
 
             <section className="mb-5">
-              <p className="mb-2 text-sm font-semibold text-[var(--text-secondary)]">Tags</p>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-semibold text-[var(--text-secondary)]">Tags</p>
+                <span className="text-xs text-[var(--text-muted)]">{selectedTagIds.length} selected</span>
+              </div>
+
+              {isLoadingTags ? <p className="mb-2 text-xs text-[var(--text-muted)]">Loading tags...</p> : null}
+              {!isLoadingTags && availableTags.length === 0 ? (
+                <p className="mb-2 text-xs text-[var(--text-muted)]">No tags yet. Create one below.</p>
+              ) : null}
+
               <div className="mb-2 flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <TagChip key={tag} name={tag} tone="blue" onClick={() => showFeedback(`Tag selected: #${tag}`)} />
+                {availableTags.map((tag) => (
+                  <TagChip
+                    key={tag.tag_id}
+                    name={tag.name}
+                    color={tag.color}
+                    selected={selectedTagIdSet.has(tag.tag_id)}
+                    onClick={() => toggleTagSelection(tag.tag_id)}
+                  />
                 ))}
               </div>
-              <button
-                type="button"
-                className="text-sm font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]"
-                onClick={onAddTagClick}
-              >
-                + Add tag
-              </button>
             </section>
 
             <section className="glass-control mb-4 rounded-xl p-3">
-              <p className="mb-2 text-sm font-semibold text-[var(--text-secondary)]">Suggested Tags</p>
-              <div className="flex flex-wrap gap-2">
-                {suggestedTags.map((tag) => (
+              <p className="mb-2 text-sm font-semibold text-[var(--text-secondary)]">Create Tag</p>
+              <form className="space-y-2" onSubmit={onCreateTag}>
+                <input
+                  type="text"
+                  value={newTagName}
+                  onChange={(event) => {
+                    setNewTagName(event.target.value);
+                    if (event.target.value.trim()) {
+                      setTagNameError(null);
+                    }
+                  }}
+                  placeholder="Tag name"
+                  className="w-full rounded-lg border border-[var(--glass-border)] bg-[color:var(--glass-surface)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:ring-2 focus:ring-[color:var(--focus-ring)]"
+                />
+                {tagNameError ? <p className="text-xs text-[color:var(--tone-warning-text)]">{tagNameError}</p> : null}
+                <textarea
+                  value={newTagDescription}
+                  onChange={(event) => setNewTagDescription(event.target.value)}
+                  placeholder="Description (optional)"
+                  className="min-h-[70px] w-full resize-y rounded-lg border border-[var(--glass-border)] bg-[color:var(--glass-surface)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:ring-2 focus:ring-[color:var(--focus-ring)]"
+                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={newTagColor || "#3B82F6"}
+                    onChange={(event) => setNewTagColor(event.target.value.toUpperCase())}
+                    className="h-8 w-10 cursor-pointer rounded border border-[var(--glass-border)] bg-transparent p-0"
+                  />
                   <button
-                    key={tag}
                     type="button"
-                    className="rounded-lg border border-[var(--glass-border)] bg-[color:var(--glass-surface)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[color:var(--glass-surface-strong)]"
-                    onClick={() => {
-                      addTag(tag);
-                      showFeedback(`Added #${tag}`, "success");
-                    }}
+                    className="rounded-lg border border-[var(--glass-border)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[color:var(--glass-surface)]"
+                    onClick={() => setNewTagColor("")}
                   >
-                    + {tag}
+                    Clear color
                   </button>
-                ))}
-              </div>
+                  <span className="text-xs text-[var(--text-muted)]">{newTagColor || "No custom color"}</span>
+                </div>
+                <button
+                  type="submit"
+                  className="w-full rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isCreatingTag}
+                >
+                  {isCreatingTag ? "Creating..." : "Create Tag"}
+                </button>
+              </form>
+            </section>
+
+            <section className="glass-control mb-4 rounded-xl p-3">
+              <p className="mb-2 text-sm font-semibold text-[var(--text-secondary)]">Update Tag Colors</p>
+              {availableTags.length === 0 ? (
+                <p className="text-xs text-[var(--text-muted)]">Create a tag to customize its color.</p>
+              ) : (
+                <div className="space-y-2">
+                  {availableTags.map((tag) => {
+                    const isUpdatingColor = updatingTagIds.has(tag.tag_id);
+                    return (
+                      <div
+                        key={tag.tag_id}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-[var(--glass-border)] bg-[color:var(--glass-surface)] px-2 py-2"
+                      >
+                        <TagChip name={tag.name} color={tag.color} />
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={tag.color || "#3B82F6"}
+                            onChange={(event) => onTagColorSelect(tag, event.target.value)}
+                            disabled={isUpdatingColor}
+                            className="h-8 w-10 cursor-pointer rounded border border-[var(--glass-border)] bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50"
+                          />
+                          <button
+                            type="button"
+                            className="rounded-lg border border-[var(--glass-border)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[color:var(--glass-surface-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+                            onClick={() => onTagColorClear(tag)}
+                            disabled={isUpdatingColor || !tag.color}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
 
             <section className="glass-control mb-4 rounded-xl p-3">
