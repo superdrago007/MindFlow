@@ -3,9 +3,11 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
+from app.models.Note_Link_Model import NoteLink
 from app.models.Note_Model import Note
 from app.models.Tag_Model import Tag
 from app.schemas.Note_schema import SaveNoteRequest
@@ -19,6 +21,13 @@ def _deduplicate_tag_ids(tag_ids: list[UUID] | None) -> list[UUID]:
         return []
 
     return list(dict.fromkeys(tag_ids))
+
+
+def _deduplicate_linked_note_ids(linked_note_ids: list[UUID] | None) -> list[UUID]:
+    if not linked_note_ids:
+        return []
+
+    return list(dict.fromkeys(linked_note_ids))
 
 
 def _load_user_tags_by_ids(tag_ids: list[UUID], user_id: int, db: Session) -> dict[UUID, Tag]:
@@ -44,11 +53,52 @@ def _serialize_note_tags(note: Note) -> list[dict]:
     ]
 
 
+def _validate_link_targets(linked_note_ids: list[UUID], user_id: int, source_note_id: UUID, db: Session) -> None:
+    if not linked_note_ids:
+        return
+
+    if source_note_id in linked_note_ids:
+        raise HTTPException(status_code=400, detail="A note cannot be linked to itself")
+
+    valid_targets = (
+        db.query(Note.note_id)
+        .filter(Note.user_id == user_id, Note.note_id.in_(linked_note_ids))
+        .all()
+    )
+    valid_target_ids = {row.note_id for row in valid_targets}
+    if len(valid_target_ids) != len(linked_note_ids):
+        raise HTTPException(status_code=400, detail="One or more linked notes are invalid")
+
+
+def _replace_note_links(source_note_id: UUID, linked_note_ids: list[UUID], db: Session) -> None:
+    existing_links = (
+        db.query(NoteLink)
+        .filter(NoteLink.source_note_id == source_note_id)
+        .all()
+    )
+    existing_targets = {link.target_note_id for link in existing_links}
+    desired_targets = set(linked_note_ids)
+
+    for link in existing_links:
+        if link.target_note_id not in desired_targets:
+            db.delete(link)
+
+    for target_note_id in desired_targets - existing_targets:
+        db.add(
+            NoteLink(
+                source_note_id=source_note_id,
+                target_note_id=target_note_id,
+            )
+        )
+
+
 async def save_note(note_payload: SaveNoteRequest, current_user: dict, db: Session):
     user_id = extract_user_id_from_token(current_user)
     selected_tag_ids = _deduplicate_tag_ids(note_payload.tag_ids)
     tags_by_id = _load_user_tags_by_ids(selected_tag_ids, user_id, db)
     selected_tags = [tags_by_id[tag_id] for tag_id in selected_tag_ids]
+    should_sync_links = "linked_note_ids" in note_payload.model_fields_set
+    selected_linked_note_ids = _deduplicate_linked_note_ids(note_payload.linked_note_ids if should_sync_links else [])
 
     try:
         if note_payload.note_id is None:
@@ -59,6 +109,12 @@ async def save_note(note_payload: SaveNoteRequest, current_user: dict, db: Sessi
             )
             new_note.tags = selected_tags
             db.add(new_note)
+            db.flush()
+
+            if should_sync_links:
+                _validate_link_targets(selected_linked_note_ids, user_id, new_note.note_id, db)
+                _replace_note_links(new_note.note_id, selected_linked_note_ids, db)
+
             db.commit()
             db.refresh(new_note)
 
@@ -85,6 +141,10 @@ async def save_note(note_payload: SaveNoteRequest, current_user: dict, db: Sessi
         existing_note.updated_at = datetime.now(timezone.utc)
         existing_note.tags = selected_tags
 
+        if should_sync_links:
+            _validate_link_targets(selected_linked_note_ids, user_id, existing_note.note_id, db)
+            _replace_note_links(existing_note.note_id, selected_linked_note_ids, db)
+
         db.commit()
         db.refresh(existing_note)
 
@@ -99,6 +159,19 @@ async def save_note(note_payload: SaveNoteRequest, current_user: dict, db: Sessi
     except HTTPException as http_exc:
         db.rollback()
         raise http_exc
+
+    except IntegrityError:
+        db.rollback()
+        logger.exception("Integrity error while saving note links for user_id=%s", user_id)
+        raise HTTPException(status_code=400, detail="Unable to save note links")
+
+    except SQLAlchemyError as db_exc:
+        db.rollback()
+        logger.exception("Database error while saving note for user_id=%s", user_id)
+        raise HTTPException(
+            status_code=500,
+            detail="Database error while saving note. Please verify note_links schema.",
+        ) from db_exc
 
     except Exception:
         db.rollback()
@@ -238,4 +311,50 @@ async def get_note_by_id(note_id: UUID, current_user: dict, db: Session):
 
     except Exception:
         logger.exception("Unexpected error while loading note_id=%s for user_id=%s", note_id, user_id)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+async def search_notes_for_links(
+    current_user: dict,
+    db: Session,
+    q: str = "",
+    limit: int = 10,
+    exclude_note_id: UUID | None = None,
+):
+    user_id = extract_user_id_from_token(current_user)
+    safe_limit = max(1, min(limit, 25))
+    normalized_query = q.strip().lower()
+
+    try:
+        notes_query = db.query(Note).filter(Note.user_id == user_id)
+        if exclude_note_id is not None:
+            notes_query = notes_query.filter(Note.note_id != exclude_note_id)
+
+        notes = (
+            notes_query
+            .order_by(func.coalesce(Note.updated_at, Note.created_at).desc())
+            .limit(150)
+            .all()
+        )
+
+        results: list[dict] = []
+        for note in notes:
+            note_title = _extract_plain_text(note.title, "Untitled Note")
+            if normalized_query and normalized_query not in note_title.lower():
+                continue
+
+            results.append(
+                {
+                    "note_id": note.note_id,
+                    "title": note_title,
+                }
+            )
+
+            if len(results) >= safe_limit:
+                break
+
+        return results
+
+    except Exception:
+        logger.exception("Unexpected error while searching notes for user_id=%s", user_id)
         raise HTTPException(status_code=500, detail="Internal Server Error")

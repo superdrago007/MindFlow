@@ -1,8 +1,12 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.schemas.Meta_data_schema import MetaDataResponse
 from app.config.db_config import get_db
+from app.models.Note_Link_Model import NoteLink
 from app.models.User_Model import User
 from app.models.Tag_Model import Tag
 from app.models.Note_Model import Note
@@ -10,6 +14,17 @@ from app.schemas.User_schema import ProfileResponse
 from app.utils.auth_utils import extract_user_id_from_token, get_current_user
 
 profile_router = APIRouter(tags=["Profile"])
+logger = logging.getLogger(__name__)
+
+
+def _is_missing_note_link_table(error: SQLAlchemyError) -> bool:
+    error_text = str(getattr(error, "orig", error)).lower()
+    references_note_link_table = "note_link" in error_text or "note_links" in error_text
+    return references_note_link_table and (
+        "does not exist" in error_text
+        or "no such table" in error_text
+        or "undefinedtable" in error_text
+    )
 
 
 @profile_router.get("/profile", response_model=ProfileResponse)
@@ -37,8 +52,22 @@ def get_profile_metadata(current_user: dict = Depends(get_current_user), db: Ses
 
     total_notes = db.query(Note).filter(Note.user_id == user_id).count()
     total_tags = db.query(Tag).filter(Tag.user_id == user_id).count()
-    # TODO: Implement connection counting when connection feature is ready
     total_connections = 0
+
+    try:
+        total_connections = (
+            db.query(NoteLink)
+            .join(Note, Note.note_id == NoteLink.source_note_id)
+            .filter(Note.user_id == user_id)
+            .count()
+        )
+    except SQLAlchemyError as error:
+        db.rollback()
+        if _is_missing_note_link_table(error):
+            logger.warning("note_links table missing while loading metadata for user_id=%s; returning Total_Connections=0", user_id)
+        else:
+            logger.exception("Failed to load profile metadata for user_id=%s", user_id)
+            raise HTTPException(status_code=500, detail="Failed to load profile metadata") from error
 
     return MetaDataResponse(
         Total_Notes=total_notes,

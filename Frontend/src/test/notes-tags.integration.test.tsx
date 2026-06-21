@@ -54,7 +54,7 @@ const { showFeedbackMock, getMock, postMock, patchMock, editorMock } = vi.hoiste
       setContent: setContentMock
     },
     getAttributes: vi.fn(() => ({ href: undefined })),
-    getJSON: vi.fn(() => ({ type: "doc", content: [{ type: "paragraph" }] })),
+    getJSON: vi.fn<() => Record<string, unknown>>(() => ({ type: "doc", content: [{ type: "paragraph" }] })),
     getText: vi.fn(() => "one two three")
   };
 
@@ -168,6 +168,56 @@ describe("notes page tag manager", () => {
         "/profile/notes",
         expect.objectContaining({
           tag_ids: ["tag-1"]
+        })
+      );
+    });
+  });
+
+  it("sends deduplicated linked_note_ids on save", async () => {
+    editorMock.getJSON.mockReturnValueOnce({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "noteMention",
+              attrs: { id: "note-a", label: "Note A" }
+            },
+            {
+              type: "text",
+              text: " and "
+            },
+            {
+              type: "noteMention",
+              attrs: { id: "note-a", label: "Note A" }
+            },
+            {
+              type: "noteMention",
+              attrs: { id: "note-b", label: "Note B" }
+            }
+          ]
+        }
+      ]
+    });
+    postMock.mockResolvedValueOnce({
+      data: {
+        note_id: "note-1",
+        operation: "created",
+        created_at: "2026-03-29T10:00:00.000Z",
+        updated_at: "2026-03-29T10:00:00.000Z",
+        last_viewed_at: null
+      }
+    });
+
+    renderPage();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(postMock).toHaveBeenCalledWith(
+        "/profile/notes",
+        expect.objectContaining({
+          linked_note_ids: ["note-a", "note-b"]
         })
       );
     });

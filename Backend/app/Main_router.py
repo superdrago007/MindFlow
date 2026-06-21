@@ -5,6 +5,7 @@ from app.routers.note_router import note_router
 from app.routers.profile_router import profile_router
 from app.routers.tag_router import tag_router
 from app.models.Note_Model import Note  # noqa: F401
+from app.models.Note_Link_Model import NoteLink  # noqa: F401
 from app.models.Note_Tag_Model import NoteTag  # noqa: F401
 from app.models.Refresh_Token_Model import Refresh_Token  # noqa: F401
 from app.models.Tag_Model import Tag  # noqa: F401

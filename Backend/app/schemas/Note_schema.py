@@ -10,6 +10,7 @@ class SaveNoteRequest(BaseModel):
     title: dict[str, Any]
     content: dict[str, Any]
     tag_ids: Optional[list[UUID]] = None
+    linked_note_ids: Optional[list[UUID]] = None
 
 
 class SaveNoteResponse(BaseModel):
@@ -43,3 +44,8 @@ class NoteDetailResponse(BaseModel):
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
     last_viewed_at: Optional[datetime]
+
+
+class NoteSearchItemResponse(BaseModel):
+    note_id: UUID
+    title: str

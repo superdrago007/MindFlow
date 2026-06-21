@@ -366,6 +366,25 @@ input[type="checkbox"] {
   text-decoration: underline;
 }
 
+.note-editor .ProseMirror .note-mention {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--tag-blue-border) 90%, transparent);
+  background: color-mix(in srgb, var(--tag-blue-bg) 92%, transparent);
+  color: var(--tag-blue-text);
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.08rem 0.45rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.note-editor .ProseMirror .note-mention:hover {
+  filter: brightness(0.96);
+}
+
 .note-toolbar ::-webkit-scrollbar {
   height: 7px;
 }

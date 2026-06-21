@@ -26,6 +26,7 @@ if database_url:
 
 from app.config.db_config import Base  # noqa: E402
 from app.models.Note_Model import Note  # noqa: F401, E402
+from app.models.Note_Link_Model import NoteLink  # noqa: F401, E402
 from app.models.Note_Tag_Model import NoteTag  # noqa: F401, E402
 from app.models.Refresh_Token_Model import Refresh_Token  # noqa: F401, E402
 from app.models.Tag_Model import Tag  # noqa: F401, E402

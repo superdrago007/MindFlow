@@ -5,6 +5,7 @@ export type SaveNoteRequest = {
   title: Record<string, unknown>;
   content: Record<string, unknown>;
   tag_ids?: string[];
+  linked_note_ids?: string[];
 };
 
 export type SaveNoteResponse = {
@@ -35,3 +36,10 @@ export type NoteDetailResponse = {
   updated_at?: string | null;
   last_viewed_at?: string | null;
 };
+
+export type NoteSearchItem = {
+  note_id: string;
+  title: string;
+};
+
+export type NoteSearchResponse = NoteSearchItem[];

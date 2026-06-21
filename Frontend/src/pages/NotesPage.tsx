@@ -1,3 +1,4 @@
+import { mergeAttributes, Node } from "@tiptap/core";
 import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
 import Link from "@tiptap/extension-link";
@@ -32,10 +33,11 @@ import {
   Sparkles,
   Strikethrough,
   Underline as UnderlineIcon,
-  Undo2
+  Undo2,
+  X
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Button from "../components/Button";
 import IconActionButton from "../components/IconActionButton";
@@ -43,8 +45,62 @@ import TagChip from "../components/TagChip";
 import ThemeToggleButton from "../components/ThemeToggleButton";
 import { useFeedback } from "../context/FeedbackContext";
 import api, { extractApiError } from "../lib/api";
-import type { NoteDetailResponse, SaveNoteRequest, SaveNoteResponse } from "../types/notes";
+import type {
+  NoteDetailResponse,
+  NoteSearchItem,
+  NoteSearchResponse,
+  SaveNoteRequest,
+  SaveNoteResponse
+} from "../types/notes";
 import type { CreateTagRequest, TagItem, TagListResponse, UpdateTagRequest } from "../types/tags";
+
+const NoteMention = Node.create({
+  name: "noteMention",
+  group: "inline",
+  inline: true,
+  atom: true,
+  selectable: false,
+
+  addAttributes() {
+    return {
+      id: {
+        default: null
+      },
+      label: {
+        default: null
+      }
+    };
+  },
+
+  parseHTML() {
+    return [
+      {
+        tag: 'a[data-note-mention="true"]'
+      }
+    ];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    const noteId = typeof HTMLAttributes.id === "string" ? HTMLAttributes.id : "";
+    const noteLabel = typeof HTMLAttributes.label === "string" ? HTMLAttributes.label : "note";
+
+    return [
+      "a",
+      mergeAttributes(HTMLAttributes, {
+        "data-note-mention": "true",
+        "data-note-id": noteId,
+        href: noteId ? `/notes?noteId=${encodeURIComponent(noteId)}` : "#",
+        class: "note-mention"
+      }),
+      `@${noteLabel}`
+    ];
+  },
+
+  renderText({ node }) {
+    const label = typeof node.attrs.label === "string" ? node.attrs.label : "note";
+    return `@${label}`;
+  }
+});
 
 const emptyNoteContent = {
   type: "doc",
@@ -97,6 +153,63 @@ function sortTagsByName(tags: TagItem[]): TagItem[] {
   );
 }
 
+function normalizeNoteSearchItems(value: unknown): NoteSearchItem[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const rawItem = item as Record<string, unknown>;
+      if (typeof rawItem.note_id !== "string" || typeof rawItem.title !== "string") {
+        return null;
+      }
+
+      return {
+        note_id: rawItem.note_id,
+        title: rawItem.title
+      };
+    })
+    .filter((item): item is NoteSearchItem => item !== null);
+}
+
+function collectLinkedNoteIds(value: unknown): string[] {
+  const collectedIds: string[] = [];
+
+  const visit = (nodeValue: unknown) => {
+    if (Array.isArray(nodeValue)) {
+      nodeValue.forEach((child) => visit(child));
+      return;
+    }
+
+    if (!nodeValue || typeof nodeValue !== "object") {
+      return;
+    }
+
+    const recordValue = nodeValue as Record<string, unknown>;
+    if (recordValue.type === "noteMention") {
+      const attrs = recordValue.attrs;
+      if (attrs && typeof attrs === "object") {
+        const id = (attrs as Record<string, unknown>).id;
+        if (typeof id === "string" && id.trim()) {
+          collectedIds.push(id.trim());
+        }
+      }
+    }
+
+    if (Array.isArray(recordValue.content)) {
+      visit(recordValue.content);
+    }
+  };
+
+  visit(value);
+  return [...new Set(collectedIds)];
+}
+
 export default function NotesPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -118,8 +231,32 @@ export default function NotesPage() {
   const [isLoadingNote, setIsLoadingNote] = useState(false);
   const [lastSavedLabel, setLastSavedLabel] = useState("Last saved: Not yet");
   const [selectedButtons, setSelectedButtons] = useState<Set<string>>(new Set());
+  const [isMentionPickerOpen, setIsMentionPickerOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionResults, setMentionResults] = useState<NoteSearchItem[]>([]);
+  const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);
+  const [isMentionLoading, setIsMentionLoading] = useState(false);
+  const [mentionError, setMentionError] = useState<string | null>(null);
+  const [mentionInsertPos, setMentionInsertPos] = useState<number | null>(null);
 
   const selectedTagIdSet = useMemo(() => new Set(selectedTagIds), [selectedTagIds]);
+
+  const openMentionPicker = useCallback((insertPos: number) => {
+    setMentionInsertPos(insertPos);
+    setMentionQuery("");
+    setMentionError(null);
+    setMentionSelectedIndex(0);
+    setIsMentionPickerOpen(true);
+  }, []);
+
+  const closeMentionPicker = useCallback(() => {
+    setIsMentionPickerOpen(false);
+    setMentionError(null);
+    setMentionResults([]);
+    setMentionSelectedIndex(0);
+    setMentionInsertPos(null);
+    setMentionQuery("");
+  }, []);
 
   const editor = useEditor({
     extensions: [
@@ -138,8 +275,20 @@ export default function NotesPage() {
       TaskItem.configure({ nested: true }),
       Subscript,
       Superscript,
-      Placeholder.configure({ placeholder: "Write your note here..." })
+      Placeholder.configure({ placeholder: "Write your note here..." }),
+      NoteMention
     ],
+    editorProps: {
+      handleKeyDown: (view, event) => {
+        if (event.key === "@" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+          event.preventDefault();
+          openMentionPicker(view.state.selection.from);
+          return true;
+        }
+
+        return false;
+      }
+    },
     content: initialContent
   });
 
@@ -212,6 +361,55 @@ export default function NotesPage() {
       cancelled = true;
     };
   }, [editor, requestedNoteId, showFeedback]);
+
+  useEffect(() => {
+    if (!isMentionPickerOpen) {
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setIsMentionLoading(true);
+      setMentionError(null);
+
+      try {
+        const response = await api.get<NoteSearchResponse>("/profile/notes/search", {
+          params: {
+            q: mentionQuery.trim(),
+            limit: 8,
+            ...(noteId ? { exclude_note_id: noteId } : {})
+          }
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        const normalizedResults = normalizeNoteSearchItems(response.data);
+        setMentionResults(normalizedResults);
+        setMentionSelectedIndex((current) => {
+          if (normalizedResults.length === 0) {
+            return 0;
+          }
+          return Math.min(current, normalizedResults.length - 1);
+        });
+      } catch (error) {
+        if (!cancelled) {
+          setMentionResults([]);
+          setMentionError(extractApiError(error));
+        }
+      } finally {
+        if (!cancelled) {
+          setIsMentionLoading(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [isMentionPickerOpen, mentionQuery, noteId]);
 
   const toolbarItems = useMemo<ToolbarItem[]>(
     () => [
@@ -429,31 +627,133 @@ export default function NotesPage() {
     }
   };
 
-  const saveNote = async () => {
-    if (!editor || isSaving || isLoadingNote) {
+  const persistNote = useCallback(
+    async (silentSuccess = false): Promise<string | null> => {
+      if (!editor || isSaving || isLoadingNote) {
+        return null;
+      }
+
+      setIsSaving(true);
+
+      try {
+        const contentJson = editor.getJSON() as Record<string, unknown>;
+        const payload: SaveNoteRequest = {
+          title: buildTitleDocument(title),
+          content: contentJson,
+          tag_ids: selectedTagIds,
+          linked_note_ids: collectLinkedNoteIds(contentJson),
+          ...(noteId ? { note_id: noteId } : {})
+        };
+
+        const response = await api.post<SaveNoteResponse>("/profile/notes", payload);
+        const operationLabel = response.data.operation === "created" ? "created" : "updated";
+
+        setNoteId(response.data.note_id);
+        setLastSavedLabel(formatLastSavedLabel(response.data.updated_at ?? response.data.created_at));
+        if (!silentSuccess) {
+          showFeedback(`Note ${operationLabel} in database.`, "success");
+        }
+
+        return response.data.note_id;
+      } catch (error) {
+        showFeedback(extractApiError(error), "warning");
+        return null;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [editor, isLoadingNote, isSaving, noteId, selectedTagIds, showFeedback, title]
+  );
+
+  const saveNote = () => {
+    void persistNote(false);
+  };
+
+  const insertMention = (item: NoteSearchItem) => {
+    if (!editor) {
       return;
     }
 
-    setIsSaving(true);
+    const insertAt = mentionInsertPos ?? editor.state.selection.from;
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(insertAt, [
+        {
+          type: "noteMention",
+          attrs: {
+            id: item.note_id,
+            label: item.title
+          }
+        },
+        {
+          type: "text",
+          text: " "
+        }
+      ])
+      .run();
 
-    try {
-      const payload: SaveNoteRequest = {
-        title: buildTitleDocument(title),
-        content: editor.getJSON() as Record<string, unknown>,
-        tag_ids: selectedTagIds,
-        ...(noteId ? { note_id: noteId } : {})
-      };
+    closeMentionPicker();
+  };
 
-      const response = await api.post<SaveNoteResponse>("/profile/notes", payload);
-      const operationLabel = response.data.operation === "created" ? "created" : "updated";
+  const navigateToLinkedNote = async (targetNoteId: string) => {
+    const savedNoteId = await persistNote(true);
+    if (!savedNoteId) {
+      return;
+    }
 
-      setNoteId(response.data.note_id);
-      setLastSavedLabel(formatLastSavedLabel(response.data.updated_at ?? response.data.created_at));
-      showFeedback(`Note ${operationLabel} in database.`, "success");
-    } catch (error) {
-      showFeedback(extractApiError(error), "warning");
-    } finally {
-      setIsSaving(false);
+    navigate(`/notes?noteId=${encodeURIComponent(targetNoteId)}`);
+  };
+
+  const onEditorSurfaceClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    const mentionElement = target.closest('[data-note-mention="true"]');
+    if (!mentionElement) {
+      return;
+    }
+
+    const targetNoteId = mentionElement.getAttribute("data-note-id");
+    if (!targetNoteId) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    void navigateToLinkedNote(targetNoteId);
+  };
+
+  const onMentionQueryKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeMentionPicker();
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (mentionResults.length === 0) {
+        return;
+      }
+      setMentionSelectedIndex((current) => (current + 1) % mentionResults.length);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (mentionResults.length === 0) {
+        return;
+      }
+      setMentionSelectedIndex((current) => (current - 1 + mentionResults.length) % mentionResults.length);
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (mentionResults.length === 0) {
+        return;
+      }
+      const selectedItem = mentionResults[Math.min(mentionSelectedIndex, mentionResults.length - 1)];
+      insertMention(selectedItem);
     }
   };
 
@@ -476,6 +776,7 @@ export default function NotesPage() {
     setTitle("Untitled Note");
     setSelectedTagIds([]);
     setLastSavedLabel("Last saved: Not yet");
+    closeMentionPicker();
     editor.chain().focus().setContent(emptyNoteContent).run();
     showFeedback("Opened a fresh note canvas.", "success");
   };
@@ -567,7 +868,60 @@ export default function NotesPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 lg:divide-x lg:divide-[var(--glass-border)]">
           <section className="lg:col-span-2">
-            <div className="note-editor px-5 py-6 sm:px-6">
+            <div className="note-editor px-5 py-6 sm:px-6" onClickCapture={onEditorSurfaceClick}>
+              {isMentionPickerOpen ? (
+                <div className="mb-4 rounded-xl border border-[var(--glass-border)] bg-[color:var(--glass-surface-strong)] p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-[var(--text-secondary)]">Connect Note (@)</p>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 rounded-lg border border-[var(--glass-border)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[color:var(--glass-surface)]"
+                      onClick={closeMentionPicker}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      Close
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={mentionQuery}
+                    onChange={(event) => setMentionQuery(event.target.value)}
+                    onKeyDown={onMentionQueryKeyDown}
+                    placeholder="Search notes to link..."
+                    autoFocus
+                    className="mb-2 w-full rounded-lg border border-[var(--glass-border)] bg-[color:var(--glass-surface)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:ring-2 focus:ring-[color:var(--focus-ring)]"
+                  />
+
+                  {isMentionLoading ? <p className="text-xs text-[var(--text-muted)]">Searching notes...</p> : null}
+                  {!isMentionLoading && mentionError ? (
+                    <p className="text-xs text-[color:var(--tone-warning-text)]">{mentionError}</p>
+                  ) : null}
+                  {!isMentionLoading && !mentionError && mentionResults.length === 0 ? (
+                    <p className="text-xs text-[var(--text-muted)]">No matching notes found.</p>
+                  ) : null}
+
+                  {!isMentionLoading && !mentionError && mentionResults.length > 0 ? (
+                    <div className="max-h-48 space-y-1 overflow-y-auto pt-1">
+                      {mentionResults.map((item, index) => (
+                        <button
+                          key={item.note_id}
+                          type="button"
+                          className={`w-full rounded-lg px-2 py-2 text-left text-sm transition ${
+                            index === mentionSelectedIndex
+                              ? "bg-[color:var(--tag-blue-bg)] text-[color:var(--tag-blue-text)]"
+                              : "bg-[color:var(--glass-surface)] text-[var(--text-secondary)] hover:bg-[color:var(--glass-surface-strong)]"
+                          }`}
+                          onMouseEnter={() => setMentionSelectedIndex(index)}
+                          onClick={() => insertMention(item)}
+                        >
+                          {item.title}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
               <EditorContent editor={editor} />
             </div>
 
