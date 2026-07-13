@@ -1,10 +1,17 @@
 import bcrypt
 import jwt as pyjwt
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
+from dotenv import load_dotenv
+
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY is not set. Add it to .env or pass it as an environment variable.")
 
 # JWT Configuration
-SECRET_KEY = "SECRET-KEY-iudbcidsbfisdcjdsvcuglvd"  # Change in production
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7

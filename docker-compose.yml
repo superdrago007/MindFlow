@@ -2,7 +2,9 @@
 
 services:
   postgres:
-    image: postgres:16-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
     container_name: mindflow-postgres
     environment:
       POSTGRES_USER: drago
@@ -48,6 +50,7 @@ services:
       - ./Backend:/app
     environment:
       - PYTHONUNBUFFERED=1
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
       - DATABASE_URL=postgresql://drago:Soham123@postgres:5432/mindflow_db
       - REDIS_URL=redis://redis:6379/0
       - SMTP_HOST=${SMTP_HOST:-}
