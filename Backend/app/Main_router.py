@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from app.routers.ask_router import ask_router
 from app.routers.auth_router import auth_router
 from app.routers.forgot_password_router import forgot_password_router
 from app.routers.note_router import note_router
@@ -19,6 +20,7 @@ app.include_router(forgot_password_router)
 app.include_router(profile_router)
 app.include_router(note_router)
 app.include_router(tag_router)
+app.include_router(ask_router)
 
 logging.basicConfig(
     level=logging.INFO, # Change to DEBUG to see the detailed logs

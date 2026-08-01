@@ -1,4 +1,4 @@
-import { Bell, BookOpen, Calendar, FileText, Link2, Plus, Search, Settings, Sparkles, Tag, User } from "lucide-react";
+import { Bell, BookOpen, Calendar, FileText, Link2, Plus, Search, Send, Settings, Sparkles, Tag, User } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
@@ -239,6 +239,25 @@ export default function HomePage() {
               Search
             </button>
           </form>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white shadow-[var(--shadow-button)] transition hover:bg-[var(--accent-strong)]"
+              onClick={() => navigate("/ask")}
+            >
+              <Sparkles className="h-4 w-4" />
+              Ask MindFlow
+            </button>
+            <button
+              type="button"
+              className="glass-control inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition hover:bg-[color:var(--glass-surface)] hover:text-[var(--text-primary)]"
+              onClick={() => navigate(`/ask?prompt=${encodeURIComponent(searchValue.trim() || "What should I review next?")}`)}
+            >
+              <Send className="h-4 w-4" />
+              Ask this search
+            </button>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -320,7 +339,7 @@ export default function HomePage() {
                     key={item}
                     type="button"
                     className="glass-control elevate-hover w-full rounded-xl px-3 py-2 text-left text-sm text-[var(--text-secondary)]"
-                    onClick={() => showFeedback(`Suggestion clicked: ${item}`)}
+                    onClick={() => navigate(`/ask?prompt=${encodeURIComponent(item)}`)}
                   >
                     {item}
                   </button>

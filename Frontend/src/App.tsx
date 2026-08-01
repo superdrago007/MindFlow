@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { FeedbackProvider } from "./context/FeedbackContext";
+import AskPage from "./pages/AskPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import NotesPage from "./pages/NotesPage";
@@ -35,6 +36,7 @@ function App() {
 
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/ask" element={<AskPage />} />
           <Route path="/notes" element={<NotesPage />} />
         </Route>
 
