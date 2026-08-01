@@ -30,6 +30,7 @@ export default function AskPage() {
   const [input, setInput] = useState(initialPrompt);
   const [messages, setMessages] = useState<AskMessage[]>([]);
   const [isAsking, setIsAsking] = useState(false);
+  const nextMessageIdRef = useRef(1);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -48,12 +49,16 @@ export default function AskPage() {
       return;
     }
 
-    const assistantMessageId = Date.now() + 1;
+    const userMessageId = nextMessageIdRef.current;
+    nextMessageIdRef.current += 1;
+    const assistantMessageId = nextMessageIdRef.current;
+    nextMessageIdRef.current += 1;
+
     setInput("");
     setIsAsking(true);
     setMessages((current) => [
       ...current,
-      { id: Date.now(), role: "user", text: trimmedQuestion },
+      { id: userMessageId, role: "user", text: trimmedQuestion },
       {
         id: assistantMessageId,
         role: "assistant",

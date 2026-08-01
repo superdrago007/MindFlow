@@ -61,6 +61,7 @@ describe("ask page", () => {
     await waitFor(() => {
       expect(screen.getByText("Backend placeholder answer.")).toBeInTheDocument();
     });
+    expect(screen.getByText("How does auth work?")).toBeInTheDocument();
   });
 
   it("prefills the input from a dashboard prompt", () => {
