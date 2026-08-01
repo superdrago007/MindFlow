@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.config.db_config import get_db
@@ -21,10 +21,11 @@ note_router = APIRouter(prefix="/profile", tags=["Notes"])
 @note_router.post("/notes", response_model=SaveNoteResponse)
 async def save_profile_note(
     note_payload: SaveNoteRequest,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return await save_note(note_payload, current_user, db)
+    return await save_note(note_payload, current_user, db, background_tasks)
 
 
 @note_router.get("/notes/recent", response_model=list[RecentNoteCardResponse])
@@ -54,5 +55,4 @@ async def get_profile_note(
     db: Session = Depends(get_db),
 ):
     return await get_note_by_id(note_id, current_user, db)
-
 

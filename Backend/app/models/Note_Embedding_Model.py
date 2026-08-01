@@ -1,7 +1,5 @@
-import uuid
- 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, Text, func
+from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Integer, Text, func
 from sqlalchemy.dialects.postgresql import UUID
  
 from app.config.db_config import Base
@@ -10,7 +8,7 @@ from app.config.db_config import Base
 class NoteEmbedding(Base):
     __tablename__ = "note_embeddings"
  
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    note_embedding_id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
  
     # Which note this chunk belongs to. Cascade delete keeps embeddings
     # in sync automatically — removing a note wipes its vectors too.
@@ -32,6 +30,8 @@ class NoteEmbedding(Base):
     # The plain text that was actually embedded — stored so the agent can
     # return it as part of the citation without a second DB round-trip.
     chunk_text = Column(Text, nullable=False)
+
+    embedding_model = Column(Text, nullable=False)
  
     # 384-dim vector produced by bge-small-en-v1.5.
     # Dimension must match the model — changing it requires a full re-index.

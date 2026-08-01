@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import HTTPException
+from fastapi import BackgroundTasks, HTTPException
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
@@ -11,6 +11,7 @@ from app.models.Note_Link_Model import NoteLink
 from app.models.Note_Model import Note
 from app.models.Tag_Model import Tag
 from app.schemas.Note_schema import SaveNoteRequest
+from app.services.embedding_service import embed_saved_note_in_background
 from app.utils.auth_utils import extract_user_id_from_token
 
 logger = logging.getLogger(__name__)
@@ -92,7 +93,19 @@ def _replace_note_links(source_note_id: UUID, linked_note_ids: list[UUID], db: S
         )
 
 
-async def save_note(note_payload: SaveNoteRequest, current_user: dict, db: Session):
+def _schedule_note_embedding(background_tasks: BackgroundTasks | None, note_id: UUID, user_id: int) -> None:
+    if background_tasks is None:
+        return
+
+    background_tasks.add_task(embed_saved_note_in_background, note_id, user_id)
+
+
+async def save_note(
+    note_payload: SaveNoteRequest,
+    current_user: dict,
+    db: Session,
+    background_tasks: BackgroundTasks | None = None,
+):
     user_id = extract_user_id_from_token(current_user)
     selected_tag_ids = _deduplicate_tag_ids(note_payload.tag_ids)
     tags_by_id = _load_user_tags_by_ids(selected_tag_ids, user_id, db)
@@ -117,6 +130,7 @@ async def save_note(note_payload: SaveNoteRequest, current_user: dict, db: Sessi
 
             db.commit()
             db.refresh(new_note)
+            _schedule_note_embedding(background_tasks, new_note.note_id, user_id)
 
             return {
                 "note_id": new_note.note_id,
@@ -147,6 +161,7 @@ async def save_note(note_payload: SaveNoteRequest, current_user: dict, db: Sessi
 
         db.commit()
         db.refresh(existing_note)
+        _schedule_note_embedding(background_tasks, existing_note.note_id, user_id)
 
         return {
             "note_id": existing_note.note_id,

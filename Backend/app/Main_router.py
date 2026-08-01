@@ -11,9 +11,15 @@ from app.models.Note_Tag_Model import NoteTag  # noqa: F401
 from app.models.Refresh_Token_Model import Refresh_Token  # noqa: F401
 from app.models.Tag_Model import Tag  # noqa: F401
 from app.models.User_Model import User  # noqa: F401
+from app.services.embedding_service import load_embedding_model
 import logging
 
 app = FastAPI()
+
+
+@app.on_event("startup")
+def startup_event() -> None:
+    load_embedding_model()
 
 app.include_router(auth_router)
 app.include_router(forgot_password_router)
