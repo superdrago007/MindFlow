@@ -38,7 +38,7 @@ QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 # Chunking thresholds
 _CONTENT_CHUNK_WORDS = 200
 _CONTENT_CHUNK_OVERLAP_WORDS = 50
-_EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
+EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
 # ---------------------------------------------------------------------------
 # Model singleton — loaded once, reused forever
@@ -59,8 +59,8 @@ def load_embedding_model() -> None:
 
     try:
         from sentence_transformers import SentenceTransformer
-        _model = SentenceTransformer(_EMBEDDING_MODEL_NAME)
-        logger.info("Embedding model loaded: %s", _EMBEDDING_MODEL_NAME)
+        _model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+        logger.info("Embedding model loaded: %s", EMBEDDING_MODEL_NAME)
     except Exception:
         logger.exception("Failed to load embedding model — note embeddings will be unavailable")
 
@@ -196,6 +196,14 @@ def _embed_texts(texts: list[str]) -> list[list[float]]:
     return [v.tolist() for v in vectors]
 
 
+def embed_query(question: str) -> list[float]:
+    """
+    Embed a user query with BGE's query-side prefix so it lands in the same
+    retrieval space as stored note chunks.
+    """
+    return _embed_texts([f"{QUERY_PREFIX}{question.strip()}"])[0]
+
+
 def upsert_note_embeddings(note_id: uuid.UUID, user_id: int, title_doc: Any, content_doc: Any, db: Session) -> None:
     """
     Delete this note's existing embeddings, then embed and insert fresh ones.
@@ -221,7 +229,7 @@ def upsert_note_embeddings(note_id: uuid.UUID, user_id: int, title_doc: Any, con
                     user_id=user_id,
                     chunk_index=idx,
                     chunk_text=chunk_text,
-                    embedding_model=_EMBEDDING_MODEL_NAME,
+                    embedding_model=EMBEDDING_MODEL_NAME,
                     embedding=vector,
                 )
             )
