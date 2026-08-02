@@ -47,12 +47,23 @@ describe("ask page", () => {
   });
 
   it("submits a question and renders the backend answer with source note links", async () => {
-    let resolveAnswer: (value: {
+    let resolveFirstAnswer: (value: {
       data: { message: string; sources: { note_id: string; title: string }[] };
     }) => void = () => {};
+    let resolveSecondAnswer: (value: { data: { message: string; sources: never[] } }) => void = () => {};
     postMock.mockReturnValue(
       new Promise((resolve) => {
-        resolveAnswer = resolve;
+        resolveFirstAnswer = resolve;
+      })
+    );
+    postMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveFirstAnswer = resolve;
+      })
+    );
+    postMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSecondAnswer = resolve;
       })
     );
 
@@ -67,7 +78,7 @@ describe("ask page", () => {
     expect(screen.getByText("Searching your notes...")).toBeInTheDocument();
     expect(postMock).toHaveBeenCalledWith("/ask/ask", { question: "How does auth work?" });
 
-    resolveAnswer({
+    resolveFirstAnswer({
       data: {
         message: "Backend placeholder answer.",
         sources: [{ note_id: "note-1", title: "Auth Flow" }]
@@ -82,6 +93,27 @@ describe("ask page", () => {
     await userEvent.click(screen.getAllByRole("button", { name: /Auth Flow/i })[0]);
 
     expect(navigateMock).toHaveBeenCalledWith("/notes?noteId=note-1");
+
+    await userEvent.type(
+      screen.getByPlaceholderText("Ask a question about your notes..."),
+      "How does JWT refresh work?"
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Send question" }));
+
+    resolveSecondAnswer({
+      data: {
+        message: "The provided notes do not contain information about how a JWT refresh flow works.",
+        sources: []
+      }
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("The provided notes do not contain information about how a JWT refresh flow works.")
+      ).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Source notes from Ask answers will appear here.")).toBeInTheDocument();
   });
 
   it("prefills the input from a dashboard prompt", () => {

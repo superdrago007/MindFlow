@@ -88,6 +88,7 @@ Rules:
 5. In "sources", include ONLY the notes that were actually used.
 6. Copy NOTE_ID and TITLE exactly as they appear.
 7. Do NOT invent note IDs or titles.
+8. If your answer says the provided notes do not contain the answer, return an empty "sources" list.
 
 Question:
 {question}
@@ -135,15 +136,13 @@ def _source_notes_for_ui(retrieval: RetrievalResult, cited_sources: list[SourceC
         for note_id, title in retrieval.titles.items()
     }
 
-    ordered_retrieved_ids = list(dict.fromkeys(str(match.note_id) for match in retrieval.matches))
     cited_ids = [
         source.note_id.strip()
         for source in cited_sources
         if source.note_id.strip() in source_by_id
     ]
 
-    source_ids = list(dict.fromkeys(cited_ids)) or ordered_retrieved_ids
-    return [source_by_id[note_id] for note_id in source_ids if note_id in source_by_id]
+    return [source_by_id[note_id] for note_id in dict.fromkeys(cited_ids)]
 
 
 def generate_answer_node(state: AskState) -> dict:

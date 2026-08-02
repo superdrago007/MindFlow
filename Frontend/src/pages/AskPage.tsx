@@ -59,7 +59,7 @@ export default function AskPage() {
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const latestSources = useMemo(() => {
-    return [...messages].reverse().find((message) => message.sources?.length)?.sources ?? [];
+    return [...messages].reverse().find((message) => message.role === "assistant" && message.status === "done")?.sources ?? [];
   }, [messages]);
 
   useEffect(() => {
