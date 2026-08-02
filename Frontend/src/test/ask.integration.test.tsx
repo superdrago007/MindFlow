@@ -4,10 +4,19 @@ import { MemoryRouter } from "react-router-dom";
 import { ThemeProvider } from "../context/ThemeContext";
 import AskPage from "../pages/AskPage";
 
-const { postMock, showFeedbackMock } = vi.hoisted(() => ({
+const { postMock, showFeedbackMock, navigateMock } = vi.hoisted(() => ({
   postMock: vi.fn(),
-  showFeedbackMock: vi.fn()
+  showFeedbackMock: vi.fn(),
+  navigateMock: vi.fn()
 }));
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: () => navigateMock
+  };
+});
 
 vi.mock("../lib/api", () => ({
   default: {
@@ -37,8 +46,10 @@ describe("ask page", () => {
     vi.clearAllMocks();
   });
 
-  it("submits a question and renders the backend answer", async () => {
-    let resolveAnswer: (value: { data: { message: string } }) => void = () => {};
+  it("submits a question and renders the backend answer with source note links", async () => {
+    let resolveAnswer: (value: {
+      data: { message: string; sources: { note_id: string; title: string }[] };
+    }) => void = () => {};
     postMock.mockReturnValue(
       new Promise((resolve) => {
         resolveAnswer = resolve;
@@ -56,12 +67,21 @@ describe("ask page", () => {
     expect(screen.getByText("Searching your notes...")).toBeInTheDocument();
     expect(postMock).toHaveBeenCalledWith("/ask/ask", { question: "How does auth work?" });
 
-    resolveAnswer({ data: { message: "Backend placeholder answer." } });
+    resolveAnswer({
+      data: {
+        message: "Backend placeholder answer.",
+        sources: [{ note_id: "note-1", title: "Auth Flow" }]
+      }
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Backend placeholder answer.")).toBeInTheDocument();
     });
     expect(screen.getByText("How does auth work?")).toBeInTheDocument();
+
+    await userEvent.click(screen.getAllByRole("button", { name: /Auth Flow/i })[0]);
+
+    expect(navigateMock).toHaveBeenCalledWith("/notes?noteId=note-1");
   });
 
   it("prefills the input from a dashboard prompt", () => {

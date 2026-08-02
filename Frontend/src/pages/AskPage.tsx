@@ -1,4 +1,4 @@
-import { ChevronLeft, FileText, Search, Send, Sparkles } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, FileText, Search, Send, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Button from "../components/Button";
@@ -6,7 +6,7 @@ import IconActionButton from "../components/IconActionButton";
 import ThemeToggleButton from "../components/ThemeToggleButton";
 import { useFeedback } from "../context/FeedbackContext";
 import api, { extractApiError } from "../lib/api";
-import type { AskRequest, AskResponse } from "../types/ask";
+import type { AskRequest, AskResponse, AskSource } from "../types/ask";
 
 const suggestedQuestions = [
   "What did I write about LangGraph memory?",
@@ -19,7 +19,32 @@ type AskMessage = {
   role: "user" | "assistant";
   text: string;
   status?: "loading" | "done" | "error";
+  sources?: AskSource[];
 };
+
+function normalizeSources(value: unknown): AskSource[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const rawSource = item as Partial<AskSource>;
+      if (typeof rawSource.note_id !== "string" || typeof rawSource.title !== "string") {
+        return null;
+      }
+
+      return {
+        note_id: rawSource.note_id,
+        title: rawSource.title.trim() || "Untitled Note"
+      };
+    })
+    .filter((source): source is AskSource => source !== null);
+}
 
 export default function AskPage() {
   const navigate = useNavigate();
@@ -32,6 +57,10 @@ export default function AskPage() {
   const [isAsking, setIsAsking] = useState(false);
   const nextMessageIdRef = useRef(1);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  const latestSources = useMemo(() => {
+    return [...messages].reverse().find((message) => message.sources?.length)?.sources ?? [];
+  }, [messages]);
 
   useEffect(() => {
     setInput(initialPrompt);
@@ -71,10 +100,11 @@ export default function AskPage() {
       const payload: AskRequest = { question: trimmedQuestion };
       const response = await api.post<AskResponse>("/ask/ask", payload);
       const answer = response.data.message?.trim() || "I did not receive an answer for that question.";
+      const sources = normalizeSources(response.data.sources);
 
       setMessages((current) =>
         current.map((message) =>
-          message.id === assistantMessageId ? { ...message, text: answer, status: "done" } : message
+          message.id === assistantMessageId ? { ...message, text: answer, status: "done", sources } : message
         )
       );
     } catch (error) {
@@ -94,6 +124,10 @@ export default function AskPage() {
     } finally {
       setIsAsking(false);
     }
+  };
+
+  const openSourceNote = (noteId: string) => {
+    navigate(`/notes?noteId=${encodeURIComponent(noteId)}`);
   };
 
   return (
@@ -172,7 +206,25 @@ export default function AskPage() {
                         {message.text}
                       </span>
                     ) : (
-                      message.text
+                      <>
+                        <p className="whitespace-pre-wrap">{message.text}</p>
+                        {message.sources?.length ? (
+                          <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--glass-border)] pt-3">
+                            {message.sources.map((source) => (
+                              <button
+                                key={`${message.id}-${source.note_id}`}
+                                type="button"
+                                onClick={() => openSourceNote(source.note_id)}
+                                className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-[var(--glass-border)] bg-[color:var(--glass-surface)] px-2.5 py-1.5 text-left text-xs font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring)]"
+                              >
+                                <FileText className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />
+                                <span className="min-w-0 truncate">{source.title}</span>
+                                <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </>
                     )}
                   </div>
                 </div>
@@ -228,9 +280,30 @@ export default function AskPage() {
                 <FileText className="h-5 w-5 text-[var(--accent)]" />
                 <h3 className="font-semibold text-[var(--text-primary)]">Sources</h3>
               </div>
-              <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
-                Source notes will appear here when the backend starts returning citations for Ask answers.
-              </p>
+              {latestSources.length ? (
+                <div className="space-y-2">
+                  {latestSources.map((source) => (
+                    <button
+                      key={source.note_id}
+                      type="button"
+                      onClick={() => openSourceNote(source.note_id)}
+                      className="glass-control elevate-hover flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left"
+                    >
+                      <FileText className="h-4 w-4 shrink-0 text-[var(--accent)]" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-[var(--text-primary)]">
+                          {source.title}
+                        </span>
+                      </span>
+                      <ArrowUpRight className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                  Source notes from Ask answers will appear here.
+                </p>
+              )}
             </section>
 
             <section className="glass-panel rounded-[1.4rem] p-4">

@@ -67,15 +67,30 @@ class AnswerWithSources(BaseModel):
     )
 
 
-_ANSWER_PROMPT = """Answer the question using only the notes below. Do not use outside knowledge, \
-and do not fill in anything the notes don't actually say.
+_ANSWER_PROMPT = """
+You are answering questions using ONLY the notes below.
 
-If the notes only partially answer the question, say so plainly rather than guessing the rest.
+Each note has this format:
 
-For "sources", list only the notes you actually drew on — leave out any given below that weren't \
-relevant. Copy each note_id exactly as written, character for character.
+--------------------------------
+NOTE_ID: <note id>
+TITLE: <title>
 
-Question: {question}
+<content>
+--------------------------------
+
+Rules:
+
+1. Use ONLY the provided notes.
+2. Never use outside knowledge.
+3. If the notes do not answer the question, clearly say so.
+4. Every statement in your answer must come from one or more notes.
+5. In "sources", include ONLY the notes that were actually used.
+6. Copy NOTE_ID and TITLE exactly as they appear.
+7. Do NOT invent note IDs or titles.
+
+Question:
+{question}
 
 Notes:
 {context}
@@ -114,13 +129,33 @@ def route_after_retrieve(state: AskState) -> str:
     return "generate_answer" if state["retrieval"].has_results else "no_results_response"
 
 
+def _source_notes_for_ui(retrieval: RetrievalResult, cited_sources: list[SourceCitation]) -> list[dict]:
+    source_by_id = {
+        str(note_id): {"note_id": str(note_id), "title": title}
+        for note_id, title in retrieval.titles.items()
+    }
+
+    ordered_retrieved_ids = list(dict.fromkeys(str(match.note_id) for match in retrieval.matches))
+    cited_ids = [
+        source.note_id.strip()
+        for source in cited_sources
+        if source.note_id.strip() in source_by_id
+    ]
+
+    source_ids = list(dict.fromkeys(cited_ids)) or ordered_retrieved_ids
+    return [source_by_id[note_id] for note_id in source_ids if note_id in source_by_id]
+
+
 def generate_answer_node(state: AskState) -> dict:
     prompt = _ANSWER_PROMPT.format(question=state["question"], context=state["retrieval"].context)
     result: AnswerWithSources = _structured_llm.invoke(prompt)
-    return {
+
+    final_ans = {
         "answer": result.answer,
-        "sources": [s.model_dump() for s in result.sources],
+        "sources": _source_notes_for_ui(state["retrieval"], result.sources),
     }
+
+    return final_ans
 
 
 def no_results_response_node(state: AskState) -> dict:

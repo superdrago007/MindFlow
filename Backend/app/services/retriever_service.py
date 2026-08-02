@@ -33,6 +33,15 @@ _SIMILARITY_THRESHOLD = 0.35
 _TOP_K = 5
 
 
+def _display_title_from_title_chunk(chunk_text: str) -> str:
+    prefix = "Note titled '"
+    suffix = "'"
+    if chunk_text.startswith(prefix) and chunk_text.endswith(suffix):
+        return chunk_text[len(prefix) : -len(suffix)]
+
+    return chunk_text
+
+
 
 
 
@@ -107,7 +116,7 @@ def fetch_note_titles(db: Session, note_ids: list[uuid.UUID]) -> dict[uuid.UUID,
         )
         .all()
     )
-    return {note_id: chunk_text for note_id, chunk_text in rows}
+    return {note_id: _display_title_from_title_chunk(chunk_text) for note_id, chunk_text in rows}
 
 
 def build_context(matches: list[ChunkMatch], titles: dict[uuid.UUID, str]) -> str:
@@ -140,7 +149,7 @@ def build_context(matches: list[ChunkMatch], titles: dict[uuid.UUID, str]) -> st
         if not content:
             content = title
 
-        blocks.append(f"Note: {title}\nnote_id: {note_id}\n{content}")
+        blocks.append(f"NOTE_ID: {note_id}\nTITLE: {title}\n\n{content}")
 
     return "\n\n---\n\n".join(blocks)
 
