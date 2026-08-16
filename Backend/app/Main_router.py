@@ -1,4 +1,7 @@
+import os
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.routers.ask_router import ask_router
 from app.routers.auth_router import auth_router
 from app.routers.forgot_password_router import forgot_password_router
@@ -15,6 +18,19 @@ from app.services.embedding_service import load_embedding_model
 import logging
 
 app = FastAPI()
+
+# Comma-separated list, e.g. "https://mindflow-frontend.onrender.com" once
+# deployed. Defaults to Vite's local dev port so nothing extra is needed
+# for local development.
+_frontend_origins = os.getenv("FRONTEND_ORIGINS", "http://localhost:5173").split(",")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_frontend_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.on_event("startup")
